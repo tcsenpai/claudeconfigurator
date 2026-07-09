@@ -1,6 +1,7 @@
 <script lang="ts">
   import { readFile, writeFile, type Field, type FileDoc } from "./api";
   import { marked } from "marked";
+  import DOMPurify from "dompurify";
   import FrontmatterEditor from "./FrontmatterEditor.svelte";
   import EditorPane from "./EditorPane.svelte";
 
@@ -21,7 +22,11 @@
   let preview = $state(false);
 
   const canPreview = $derived(lang === "markdown");
-  const html = $derived(preview ? marked.parse(body, { async: false }) as string : "");
+  // Sanitize: third-party skill/agent .md could embed <script>; the preview
+  // renders in the webview, so strip anything unsafe before {@html}.
+  const html = $derived(
+    preview ? DOMPurify.sanitize(marked.parse(body, { async: false }) as string) : "",
+  );
 
   // Load whenever `path` changes.
   $effect(() => {

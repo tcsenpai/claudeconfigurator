@@ -50,13 +50,19 @@ export function makeEditor(opts: {
     if (opts.lang !== "markdown") return;
     clearTimeout(scanTimer);
     scanTimer = setTimeout(async () => {
-      refs = await scanRefs(view.state.doc.toString(), opts.dir);
-      view.dispatch({ effects: setRefs.of(refs) });
+      const text = view.state.doc.toString();
+      const scanned = await scanRefs(text, opts.dir);
+      refs = scanned;
+      // The view may have been destroyed while the scan was in flight;
+      // dispatching then throws, so guard it.
+      try {
+        view.dispatch({ effects: setRefs.of(refs) });
+      } catch { /* view torn down */ }
     }, 250) as unknown as number;
   };
 
   const refAt = (pos: number): Ref | undefined =>
-    refs.find((r) => pos >= r.start && pos <= r.end && r.target);
+    refs.find((r) => pos >= r.start && pos < r.end && r.target);
 
   const view = new EditorView({
     parent: opts.parent,

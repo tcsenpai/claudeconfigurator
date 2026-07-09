@@ -37,12 +37,19 @@ pub fn scan(body: &str, file_dir: &str, cat: &Catalog) -> Result<Vec<Ref>, Strin
             while j < bytes.len() && is_token_byte(bytes[j]) {
                 j += 1;
             }
-            if j > start + 1 {
-                let token = &body[start + 1..j];
-                let target = resolve(token, file_dir, &root, cat);
-                refs.push(Ref { start, end: j, token: token.to_string(), target });
+            let scan_end = j;
+            // Trailing sentence punctuation ('.'/':') is prose, not part of the
+            // ref (e.g. "see @config.md." -> token `config.md`, dot excluded).
+            let mut end = j;
+            while end > start + 1 && matches!(bytes[end - 1], b'.' | b':') {
+                end -= 1;
             }
-            i = j;
+            if end > start + 1 {
+                let token = &body[start + 1..end];
+                let target = resolve(token, file_dir, &root, cat);
+                refs.push(Ref { start, end, token: token.to_string(), target });
+            }
+            i = scan_end;
         } else {
             i += 1;
         }
@@ -145,6 +152,20 @@ mod tests {
             let cat = Catalog::default();
             let refs = scan("mail me at foo@bar.com", "", &cat).unwrap();
             assert!(refs.is_empty(), "foo@bar should not match (no boundary)");
+        });
+    }
+
+    #[test]
+    fn trailing_punctuation_excluded() {
+        with_claude(|claude| {
+            fs::write(claude.join("RTK.md"), "x").unwrap();
+            let cat = Catalog::default();
+            let refs = scan("see @RTK.md.", "", &cat).unwrap();
+            assert_eq!(refs.len(), 1);
+            assert_eq!(refs[0].token, "RTK.md", "trailing '.' must be excluded");
+            assert_eq!(refs[0].target.as_deref(), Some("RTK.md"));
+            // The decoration range must not cover the trailing dot.
+            assert_eq!(refs[0].end, refs[0].start + 1 + "RTK.md".len());
         });
     }
 }
