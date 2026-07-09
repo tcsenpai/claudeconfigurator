@@ -4,3 +4,8 @@ src-tauri/target/
 src-tauri/gen/
 *.log
 phi-report.json
+
+# Local agent/workflow tooling (machine-specific, not part of the project)
+.bank
+.mycelium/
+.DS_Store

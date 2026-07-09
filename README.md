@@ -1,69 +1,118 @@
 # ClaudeConfigurator
 
-Minimal desktop GUI to configure Claude Code by editing `~/.claude`.
-Tauri 2 + Svelte 5 + CodeMirror 6. Rust owns the filesystem, path-jailed to `~/.claude`.
+A minimal desktop application for configuring Claude Code by editing the files
+under `~/.claude`. It provides a focused GUI over the configuration surface:
+the entrypoint `CLAUDE.md`, adjacent instruction files, skills, commands,
+agents, hooks, plugins, and `settings.json`.
+
+Built with Tauri 2, Svelte 5, and CodeMirror 6. The Rust core owns all
+filesystem access and is path-jailed to `~/.claude`. Every write is backed up
+and atomic.
 
 ## Features
 
-- **CLAUDE.md** — dedicated tab for the entrypoint file.
-- **Files** — edit adjacent root `.md` files.
-- **Skills / Commands / Agents** — browse cards from frontmatter, edit `SKILL.md` / command / agent files.
-- **Hooks** — per-event editor for `settings.json` hooks (matcher + command/http hooks, timeout, async).
-- **Plugins** — list installed plugins + marketplaces, enable/disable toggle; install/remove/add-marketplace shell out to the `claude` CLI (no reimplementation of its plugin lifecycle).
-- **Settings** — recursive JSON form (every nested key editable) with a raw-JSON fallback; validated on save.
-- **Markdown preview** — toggle any markdown file between source (with `@`-highlight) and rendered view.
-- **`@`-references** — highlighted in markdown; ctrl/cmd+click follows the target (file path, or `@skill`/`@command`/`@agent` name) into the right view.
-- **Generic frontmatter editor** — every YAML key becomes a field (text / chip-list); unknown/nested keys shown read-only.
-- **Rotating backups** — each save copies the file to `~/.claude/backups/…` (keeps newest 5). Writes are atomic.
+- **CLAUDE.md**: dedicated tab for the entrypoint instruction file.
+- **Files**: edit the other root-level `.md` files in `~/.claude`.
+- **Skills, Commands, Agents**: browse entries as cards built from their YAML
+  frontmatter, then edit the underlying file.
+- **Hooks**: a per-event editor for the hooks defined in `settings.json`
+  (matcher, command or HTTP hook, timeout, async).
+- **Plugins**: list installed plugins and marketplaces, enable or disable them,
+  and install, remove, or add a marketplace. Lifecycle operations are delegated
+  to the `claude` CLI rather than reimplemented.
+- **Settings**: a recursive JSON form that exposes every nested key, with a raw
+  JSON mode. Both modes share the same in-memory model, so unsaved edits carry
+  across when switching. Content is validated before saving.
+- **Markdown preview**: toggle any markdown file between source and a rendered
+  view.
+- **`@` references**: references such as `@RTK.md`, `@~/.claude/file.md`, or a
+  bare `@skill` / `@command` / `@agent` name are highlighted in the editor.
+  Ctrl or Cmd click follows a resolved reference and opens its target in the
+  correct tab.
+- **Generic frontmatter editor**: each YAML key becomes an input (text field or
+  chip list). Unknown or nested keys are shown read only and edited through the
+  file body.
+- **Rotating backups**: each save copies the previous file content to
+  `~/.claude/backups/`, keeping the five most recent versions. Writes are
+  performed atomically (temp file plus rename).
 
-## Develop
+## Safety
+
+- All filesystem paths are canonicalized and rejected if they resolve outside
+  `~/.claude`. This is the single security boundary.
+- `settings.json` is parsed and validated before any write; invalid JSON is
+  refused.
+- Backups are written before every save.
+
+This application edits your live Claude Code configuration. Changes take effect
+for your actual setup.
+
+## Requirements
+
+- [Bun](https://bun.sh)
+- Rust toolchain (stable)
+- Tauri 2 system dependencies for your platform. See the
+  [Tauri prerequisites](https://tauri.app/start/prerequisites/).
+- The `claude` CLI on `PATH` for plugin install, remove, and marketplace
+  operations.
+
+## Development
 
 ```sh
 bun install
-bun run tauri dev      # run the app
+bun run tauri dev
 ```
 
 ## Build
 
 ```sh
-bun run tauri build    # bundled app
+bun run tauri build
 ```
 
-Rust tests:
+## Tests
 
 ```sh
 cd src-tauri && cargo test
 ```
 
-## Add a module
+The Rust tests cover the security-critical logic: the path jail, frontmatter
+round-tripping, backup rotation, reference resolution, and settings writes.
 
-Adding a view = drop a folder under `src/views/` and add one line to
-`src/views/registry.ts`. Editing files reuses `src/lib/DocEditor.svelte`
-(frontmatter editor + CodeMirror pane + save). Domain data comes from Rust
-commands in `src-tauri/src/fs_cmds.rs`.
+## Extending
 
-## Layout
+Adding a view is intentionally cheap. Create a component under `src/views/` and
+add one line to `src/views/registry.ts`. File editing reuses
+`src/lib/DocEditor.svelte`, which composes the frontmatter editor, the
+CodeMirror pane, and the save logic. Domain data comes from Tauri commands in
+`src-tauri/src/fs_cmds.rs`.
+
+## Project layout
 
 ```
 src/
-  App.svelte              shell + sidebar
-  views/registry.ts       the extensibility contract
-  views/*View.svelte      one per sidebar entry
+  App.svelte                shell and sidebar
+  views/registry.ts         the extensibility contract
+  views/*View.svelte        one component per sidebar entry
   lib/
-    api.ts                typed invoke() wrappers
-    DocEditor.svelte      frontmatter + editor + save
-    CatalogView.svelte    shared skills/commands/agents list
+    api.ts                  typed invoke() wrappers
+    DocEditor.svelte        frontmatter editor, CodeMirror pane, save
+    CatalogView.svelte      shared skills/commands/agents list
     FrontmatterEditor.svelte
-    EditorPane.svelte     CodeMirror wrapper
-    editor.ts             CodeMirror setup + @-ref decorations/click
-    nav.svelte.ts         cross-view navigation store
+    EditorPane.svelte       CodeMirror wrapper
+    editor.ts               CodeMirror setup, reference decorations and clicks
+    JsonNode.svelte         recursive JSON form node
+    nav.svelte.ts           cross-view navigation store
 src-tauri/src/
-  jail.rs                 path jail (security boundary)
-  frontmatter.rs          YAML split / parse / round-trip
-  backup.rs               rotating backups
-  index.rs                skills/commands/agents catalog
-  refs.rs                 @-ref scan + resolve
-  settings.rs             structured settings.json access (hooks, nested keys)
-  plugins.rs              plugin list/toggle + shell-out to `claude`
-  fs_cmds.rs              Tauri command surface
+  jail.rs                   path jail (security boundary)
+  frontmatter.rs            YAML split, parse, round-trip
+  backup.rs                 rotating backups
+  index.rs                  skills/commands/agents catalog
+  refs.rs                   reference scan and resolution
+  settings.rs               structured settings.json access
+  plugins.rs                plugin listing, toggle, CLI delegation
+  fs_cmds.rs                Tauri command surface
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
