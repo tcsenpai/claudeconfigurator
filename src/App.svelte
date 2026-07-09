@@ -35,5 +35,7 @@
   }
   .sidebar button:hover { background: var(--bg-hover); color: var(--fg); }
   .sidebar button.active { background: var(--bg-hover); color: var(--accent); }
-  main { min-width: 0; overflow: hidden; }
+  /* min-height: 0 lets this grid item shrink to the 100vh row instead of
+     growing to fit content, so inner overflow-y: auto panes actually scroll. */
+  main { min-width: 0; min-height: 0; overflow: hidden; }
 </style>
