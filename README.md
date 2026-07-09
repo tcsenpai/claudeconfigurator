@@ -1,6 +1,6 @@
 # ClaudeConfigurator
 
-<img width="1118" height="735" alt="CleanShot 2026-07-09 at 09 41 25" src="https://github.com/user-attachments/assets/703dc82a-36e2-4ea1-9dba-8f19d5047cf3" />
+<img width="1024" height="1024" alt="icon" src="https://github.com/user-attachments/assets/1891123a-b215-44d9-b86c-1d0ae4e5921d" />
 
 
 A minimal desktop application for configuring Claude Code by editing the files
@@ -11,6 +11,9 @@ agents, hooks, plugins, and `settings.json`.
 Built with Tauri 2, Svelte 5, and CodeMirror 6. The Rust core owns all
 filesystem access and is path-jailed to `~/.claude`. Every write is backed up
 and atomic.
+
+<img width="1118" height="735" alt="CleanShot 2026-07-09 at 09 41 25" src="https://github.com/user-attachments/assets/703dc82a-36e2-4ea1-9dba-8f19d5047cf3" />
+
 
 ## Features
 
