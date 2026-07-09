@@ -66,3 +66,9 @@ export const importFile = (kind: Kind, name: string, src: string, namespace?: st
 export const importSkillDir = (name: string, src: string) =>
   invoke<string>("import_skill_dir", { name, src });
 export const deleteEntry = (path: string) => invoke<void>("delete_entry", { path });
+
+// --- graph ---
+export interface GraphNode { id: string; kind: string }
+export interface GraphEdge { from: string; to: string; kind: string }
+export interface Graph { nodes: GraphNode[]; edges: GraphEdge[] }
+export const graphData = () => invoke<Graph>("graph_data");

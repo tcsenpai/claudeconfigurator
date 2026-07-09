@@ -2,6 +2,7 @@ mod backup;
 mod create;
 mod frontmatter;
 mod fs_cmds;
+mod graph;
 mod index;
 mod jail;
 mod plugins;
@@ -33,6 +34,7 @@ pub fn run() {
             create::import_file,
             create::import_skill_dir,
             create::delete_entry,
+            graph::graph_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

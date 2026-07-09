@@ -35,6 +35,11 @@ and atomic.
 - **Plugins**: list installed plugins and marketplaces, enable or disable them,
   and install, remove, or add a marketplace. Lifecycle operations are delegated
   to the `claude` CLI rather than reimplemented.
+- **Graph**: a dependency graph of the config. Nodes are files (plus
+  `settings.json` and the hook scripts it invokes); edges are `@`-references and
+  hook script invocations. It shows an ego-graph around a focused file (default
+  `CLAUDE.md`): click a node to re-center, double-click to open it. Answers "what
+  does this reference" and "what references this".
 - **Settings**: a recursive JSON form that exposes every nested key, with a raw
   JSON mode. Both modes share the same in-memory model, so unsaved edits carry
   across when switching. Content is validated before saving.
@@ -182,6 +187,7 @@ src-tauri/src/
   backup.rs                 rotating backups
   index.rs                  skills/commands/agents catalog
   refs.rs                   reference scan and resolution
+  graph.rs                  dependency graph (nodes + edges)
   settings.rs               structured settings.json access
   plugins.rs                plugin listing, toggle, CLI delegation
   create.rs                 create / import entries

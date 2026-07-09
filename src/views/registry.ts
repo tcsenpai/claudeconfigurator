@@ -4,6 +4,7 @@ import FilesView from "./FilesView.svelte";
 import SkillsView from "./SkillsView.svelte";
 import CommandsView from "./CommandsView.svelte";
 import AgentsView from "./AgentsView.svelte";
+import GraphView from "./GraphView.svelte";
 import HooksView from "./HooksView.svelte";
 import PluginsView from "./PluginsView.svelte";
 import SettingsView from "./SettingsView.svelte";
@@ -21,6 +22,7 @@ export const views: View[] = [
   { id: "skills", label: "Skills", component: SkillsView },
   { id: "commands", label: "Commands", component: CommandsView },
   { id: "agents", label: "Agents", component: AgentsView },
+  { id: "graph", label: "Graph", component: GraphView },
   { id: "hooks", label: "Hooks", component: HooksView },
   { id: "plugins", label: "Plugins", component: PluginsView },
   { id: "settings", label: "Settings", component: SettingsView },
