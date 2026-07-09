@@ -113,6 +113,19 @@ After building, install the bundle onto the current system:
 On macOS this copies the `.app` into `/Applications`. On Linux it installs the
 `.deb` or `.rpm` (with sudo), or copies the AppImage into `~/.local/bin`.
 
+### macOS: "app is damaged" on first launch
+
+The macOS builds are ad-hoc signed but not signed with an Apple Developer
+certificate or notarized. On Apple Silicon a downloaded, unsigned app can be
+quarantined by Gatekeeper and refuse to open with "ClaudeConfigurator is
+damaged and can't be opened". Remove the quarantine attribute to allow it:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/ClaudeConfigurator.app
+```
+
+Then open it normally. Building from source locally avoids this entirely.
+
 ## Releases
 
 Pushing a `v*` tag triggers the `release` GitHub Actions workflow
