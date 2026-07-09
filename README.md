@@ -110,6 +110,18 @@ After building, install the bundle onto the current system:
 On macOS this copies the `.app` into `/Applications`. On Linux it installs the
 `.deb` or `.rpm` (with sudo), or copies the AppImage into `~/.local/bin`.
 
+## Releases
+
+Pushing a `v*` tag triggers the `release` GitHub Actions workflow
+(`.github/workflows/release.yml`), which builds native bundles for macOS
+(Apple Silicon and Intel), Linux, and Windows and attaches them to a draft
+GitHub release for that tag. Review the draft, then publish it.
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
 ## Tests
 
 ```sh
