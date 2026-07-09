@@ -1,7 +1,7 @@
-# ClaudeConfigurator
-
-<img width="1024" height="1024" alt="icon" src="https://github.com/user-attachments/assets/1891123a-b215-44d9-b86c-1d0ae4e5921d" />
-
+<h1>
+  <img src="https://github.com/user-attachments/assets/1891123a-b215-44d9-b86c-1d0ae4e5921d" alt="icon" width="40" height="40" align="top" />
+  ClaudeConfigurator
+</h1>
 
 A minimal desktop application for configuring Claude Code by editing the files
 under `~/.claude`. It provides a focused GUI over the configuration surface:
