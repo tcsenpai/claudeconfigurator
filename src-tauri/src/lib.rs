@@ -25,6 +25,7 @@ pub fn run() {
             fs_cmds::scan_refs,
             settings::settings_get,
             settings::settings_set,
+            settings::settings_schema,
             plugins::plugins_list,
             plugins::plugin_set_enabled,
             plugins::plugin_install,

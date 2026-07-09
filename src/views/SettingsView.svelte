@@ -1,19 +1,20 @@
 <script lang="ts">
-  import { readFile, writeRaw } from "../lib/api";
+  import { readFile, writeRaw, settingsSchema, type JsonSchema } from "../lib/api";
+  import SchemaField from "../lib/SchemaField.svelte";
   import JsonNode from "../lib/JsonNode.svelte";
+  import { assignGroups, TAB_KEYS } from "../lib/settingsGroups";
+  import { nav } from "../lib/nav.svelte";
 
   const PATH = "settings.json";
 
-  // Single source of truth. Both Form and Raw edit `data`; switching modes
-  // carries unsaved edits because neither reloads from disk.
-  let data = $state<unknown>(null);
+  // Single source of truth. Form and Raw both edit `data`.
+  let data = $state<Record<string, unknown> | null>(null);
+  let schema = $state<JsonSchema>({});
   let mode = $state<"form" | "raw">("form");
   let dirty = $state(false);
   let saving = $state(false);
   let error = $state("");
 
-  // Raw-mode text buffer + its own parse error (kept separate so a temporarily
-  // invalid edit doesn't corrupt `data`).
   let rawText = $state("");
   let rawError = $state("");
 
@@ -21,39 +22,24 @@
     readFile(PATH)
       .then((d) => { data = JSON.parse(d.raw); error = ""; })
       .catch((e) => (error = String(e)));
+    settingsSchema().then((s) => (schema = s)).catch(() => (schema = {}));
   });
 
-  function onRoot(v: unknown) { data = v; dirty = true; }
+  const groups = $derived(data ? assignGroups(Object.keys(data)) : []);
 
-  function enterRaw() {
-    rawText = JSON.stringify(data, null, 2);
-    rawError = "";
-    mode = "raw";
+  function setKey(key: string, value: unknown) {
+    data = { ...(data as object), [key]: value };
+    dirty = true;
   }
 
-  function enterForm() {
-    // Commit the raw buffer into `data` before showing the form.
-    if (!syncRaw()) return; // stay in raw if it doesn't parse
-    mode = "form";
-  }
+  function enterRaw() { rawText = JSON.stringify(data, null, 2); rawError = ""; mode = "raw"; }
+  function enterForm() { if (syncRaw()) mode = "form"; }
 
-  // Parse rawText into data. Returns true on success.
   function syncRaw(): boolean {
-    try {
-      data = JSON.parse(rawText);
-      rawError = "";
-      dirty = true;
-      return true;
-    } catch (e) {
-      rawError = String(e);
-      return false;
-    }
+    try { data = JSON.parse(rawText); rawError = ""; dirty = true; return true; }
+    catch (e) { rawError = String(e); return false; }
   }
-
-  function onRawInput(text: string) {
-    rawText = text;
-    syncRaw(); // keep `data` live when valid; surface error when not
-  }
+  function onRawInput(text: string) { rawText = text; syncRaw(); }
 
   const canSave = $derived(dirty && !saving && (mode === "form" || !rawError));
 
@@ -64,11 +50,8 @@
     try {
       await writeRaw(PATH, JSON.stringify(data, null, 2) + "\n", true);
       dirty = false;
-    } catch (e) {
-      error = String(e);
-    } finally {
-      saving = false;
-    }
+    } catch (e) { error = String(e); }
+    finally { saving = false; }
   }
 </script>
 
@@ -87,15 +70,37 @@
   {#if data === null}
     <div class="empty">Loading…</div>
   {:else if mode === "form"}
-    <div class="form"><JsonNode value={data} onChange={onRoot} /></div>
+    <div class="form">
+      {#each groups as g (g.def.id)}
+        <section>
+          <h3>{g.def.title}</h3>
+          {#each g.keys as key (key)}
+            {#if TAB_KEYS[key]}
+              <div class="tabptr">
+                <span class="key">{key}</span>
+                <button onclick={() => (nav.view = TAB_KEYS[key].toLowerCase())}>
+                  Edit in {TAB_KEYS[key]} tab →
+                </button>
+              </div>
+            {:else}
+              <SchemaField
+                {key}
+                prop={schema.properties?.[key]}
+                value={data[key]}
+                onChange={(v) => setKey(key, v)}
+              />
+            {/if}
+          {/each}
+        </section>
+      {/each}
+      <!-- feedbackSurveyState and other runtime keys not in any group are
+           already covered by the "Other" group via assignGroups. -->
+    </div>
   {:else}
     <div class="raw">
       {#if rawError}<div class="err">{rawError}</div>{/if}
-      <textarea
-        spellcheck="false"
-        value={rawText}
-        oninput={(e) => onRawInput(e.currentTarget.value)}
-      ></textarea>
+      <textarea spellcheck="false" value={rawText}
+        oninput={(e) => onRawInput(e.currentTarget.value)}></textarea>
     </div>
   {/if}
 </div>
@@ -109,10 +114,19 @@
   .path { color: var(--fg-dim); font-size: 12px; font-family: ui-monospace, monospace; }
   .actions { display: flex; gap: 6px; }
   .actions button.on { border-color: var(--accent); color: var(--accent); }
-  .form { flex: 1; overflow-y: auto; padding: 10px 12px; }
+  .form { flex: 1; overflow-y: auto; padding: 4px 16px 24px; }
+  section { margin: 14px 0; }
+  section h3 {
+    font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px;
+    margin: 0 0 4px; border-bottom: 1px solid var(--border); padding-bottom: 4px;
+  }
+  .tabptr {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .tabptr .key { flex: 1; font-size: 12px; font-family: ui-monospace, monospace; }
   .raw { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .raw textarea {
-    flex: 1; resize: none; border: none; border-radius: 0; padding: 10px 12px;
+    flex: 1; resize: none; border: none; padding: 10px 12px;
     font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.5;
   }
   .raw textarea:focus { outline: none; }

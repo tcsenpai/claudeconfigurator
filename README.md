@@ -40,9 +40,13 @@ and atomic.
   hook script invocations. It shows an ego-graph around a focused file (default
   `CLAUDE.md`): click a node to re-center, double-click to open it. Answers "what
   does this reference" and "what references this".
-- **Settings**: a recursive JSON form that exposes every nested key, with a raw
-  JSON mode. Both modes share the same in-memory model, so unsaved edits carry
-  across when switching. Content is validated before saving.
+- **Settings**: a schema-driven form grouped by intent (Model & behavior,
+  Permissions & safety, Environment, Git & attribution, Appearance, Plugins).
+  Each known key renders as a proper widget (toggle, number stepper, 0..1
+  slider, enum dropdown, chip list) with its JSON Schema description as inline
+  help; complex objects with a dedicated tab link there, and anything unknown
+  falls back to a generic JSON editor. A raw JSON mode shares the same in-memory
+  model, so unsaved edits carry across. Content is validated before saving.
 - **Markdown preview**: toggle any markdown file between source and a rendered
   view.
 - **`@` references**: references such as `@RTK.md`, `@~/.claude/file.md`, or a

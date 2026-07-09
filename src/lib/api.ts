@@ -38,6 +38,21 @@ export const settingsGet = <T = unknown>(key: string) => invoke<T>("settings_get
 export const settingsSet = (key: string, value: unknown) =>
   invoke<void>("settings_set", { key, value });
 
+// The bundled JSON Schema for settings.json (loose shape; we read a subset).
+export interface JsonSchema {
+  properties?: Record<string, SchemaProp>;
+}
+export interface SchemaProp {
+  type?: string | string[];
+  description?: string;
+  enum?: unknown[];
+  default?: unknown;
+  minimum?: number;
+  maximum?: number;
+  items?: { type?: string };
+}
+export const settingsSchema = () => invoke<JsonSchema>("settings_schema");
+
 // --- plugins ---
 export interface Plugin {
   id: string;

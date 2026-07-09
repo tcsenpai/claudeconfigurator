@@ -14,6 +14,16 @@ fn load() -> Result<Value, String> {
     serde_json::from_str(&raw).map_err(|e| format!("settings.json parse error: {e}"))
 }
 
+/// The JSON Schema for settings.json, vendored at build time from
+/// json.schemastore.org. Used to drive typed form widgets + inline help.
+const SCHEMA: &str = include_str!("../assets/claude-code-settings.schema.json");
+
+/// Return the bundled settings JSON Schema (parsed).
+#[tauri::command]
+pub fn settings_schema() -> Result<Value, String> {
+    serde_json::from_str(SCHEMA).map_err(|e| format!("bundled schema parse error: {e}"))
+}
+
 /// Read a top-level key (returns `null` if absent).
 #[tauri::command]
 pub fn settings_get(key: String) -> Result<Value, String> {
