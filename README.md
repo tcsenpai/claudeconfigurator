@@ -56,6 +56,22 @@ for your actual setup.
 - The `claude` CLI on `PATH` for plugin install, remove, and marketplace
   operations.
 
+## Quick install
+
+Clone, build the native bundle, and install it for your platform:
+
+```sh
+git clone https://github.com/tcsenpai/claudeconfigurator.git
+cd claudeconfigurator
+./build.sh      # macOS: .app + .dmg    Linux: .deb + .appimage
+./install.sh    # macOS: -> /Applications    Linux: dpkg/rpm or ~/.local/bin
+```
+
+`build.sh` installs the frontend dependencies and produces the bundle;
+`install.sh` places the built bundle onto your system. Both detect the platform
+automatically. See [Build](#build) and [Install](#install) for the individual
+flags.
+
 ## Development
 
 ```sh
