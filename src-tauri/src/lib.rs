@@ -1,4 +1,5 @@
 mod backup;
+mod create;
 mod frontmatter;
 mod fs_cmds;
 mod index;
@@ -13,6 +14,7 @@ mod testutil;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             fs_cmds::list_root_md,
             fs_cmds::read_file,
@@ -27,6 +29,9 @@ pub fn run() {
             plugins::plugin_install,
             plugins::plugin_remove,
             plugins::marketplace_add,
+            create::create_entry,
+            create::import_file,
+            create::import_skill_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { catalog, type Entry } from "./api";
+  import { catalog, type Entry, type Kind } from "./api";
   import DocEditor from "./DocEditor.svelte";
+  import AddDialog from "./AddDialog.svelte";
   import { nav, follow } from "./nav.svelte";
 
   interface Props {
@@ -13,8 +14,21 @@
   let entries = $state<Entry[]>([]);
   let selected = $state<string | null>(null);
   let filter = $state("");
+  let adding = $state(false);
 
-  $effect(() => { catalog().then((c) => (entries = c[kind])); });
+  // Plural view kind -> singular create kind.
+  const addKind = $derived<Kind>(
+    kind === "skills" ? "skill" : kind === "commands" ? "command" : "agent",
+  );
+
+  function reload() { return catalog().then((c) => (entries = c[kind])); }
+  $effect(() => { reload(); });
+
+  async function onCreated(path: string) {
+    adding = false;
+    await reload();
+    selected = path;
+  }
 
   // Cross-view open request for a path this view owns.
   $effect(() => {
@@ -39,7 +53,10 @@
 
 <div class="split">
   <div class="list">
-    <input class="filter" bind:value={filter} placeholder="Filter…" />
+    <div class="toolbar">
+      <input class="filter" bind:value={filter} placeholder="Filter…" />
+      <button class="add" title="New {addKind}" onclick={() => (adding = true)}>+</button>
+    </div>
     <div class="cards">
       {#each shown as e (e.path)}
         <button class="card" class:active={selected === e.path} onclick={() => (selected = e.path)}>
@@ -54,10 +71,16 @@
   </div>
 </div>
 
+{#if adding}
+  <AddDialog kind={addKind} onClose={() => (adding = false)} onCreated={onCreated} />
+{/if}
+
 <style>
   .split { display: grid; grid-template-columns: 260px 1fr; height: 100%; }
   .list { display: flex; flex-direction: column; border-right: 1px solid var(--border); min-height: 0; }
-  .filter { margin: 6px; }
+  .toolbar { display: flex; gap: 4px; margin: 6px; }
+  .filter { flex: 1; }
+  .add { padding: 0 10px; font-size: 15px; line-height: 1; }
   .cards { overflow-y: auto; padding: 0 6px 6px; display: flex; flex-direction: column; gap: 4px; }
   .card {
     text-align: left; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 5px;

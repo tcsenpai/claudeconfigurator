@@ -55,3 +55,13 @@ export const pluginSetEnabled = (id: string, enabled: boolean) =>
 export const pluginInstall = (id: string) => invoke<string>("plugin_install", { id });
 export const pluginRemove = (id: string) => invoke<string>("plugin_remove", { id });
 export const marketplaceAdd = (repo: string) => invoke<string>("marketplace_add", { repo });
+
+// --- create / import ---
+export type Kind = "skill" | "command" | "agent" | "file";
+
+export const createEntry = (kind: Kind, name: string, namespace?: string) =>
+  invoke<string>("create_entry", { kind, name, namespace: namespace || null });
+export const importFile = (kind: Kind, name: string, src: string, namespace?: string) =>
+  invoke<string>("import_file", { kind, name, src, namespace: namespace || null });
+export const importSkillDir = (name: string, src: string) =>
+  invoke<string>("import_skill_dir", { name, src });
