@@ -1,5 +1,8 @@
 # ClaudeConfigurator
 
+<img width="1118" height="735" alt="CleanShot 2026-07-09 at 09 41 25" src="https://github.com/user-attachments/assets/703dc82a-36e2-4ea1-9dba-8f19d5047cf3" />
+
+
 A minimal desktop application for configuring Claude Code by editing the files
 under `~/.claude`. It provides a focused GUI over the configuration surface:
 the entrypoint `CLAUDE.md`, adjacent instruction files, skills, commands,
