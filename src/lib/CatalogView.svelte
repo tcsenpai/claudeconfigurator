@@ -116,7 +116,7 @@
   .add { padding: 0 10px; font-size: 15px; line-height: 1; }
   .cards { overflow-y: auto; padding: 0 6px 6px; display: flex; flex-direction: column; gap: 4px; }
   .row {
-    display: flex; align-items: stretch; background: var(--bg-alt);
+    display: flex; align-items: stretch; flex-shrink: 0; background: var(--bg-alt);
     border: 1px solid var(--border); border-radius: 5px; overflow: hidden;
   }
   .row:hover { background: var(--bg-hover); }

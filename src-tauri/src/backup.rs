@@ -15,7 +15,9 @@ pub fn rotate(target: &Path) -> Result<(), String> {
     if !target.exists() {
         return Ok(());
     }
-    let root = jail::root()?.canonicalize().map_err(|e| e.to_string())?;
+    // Use the non-canonical root to match jail::resolve, which returns paths
+    // rooted at ~/.claude without following symlinks.
+    let root = jail::root()?;
     let rel = target.strip_prefix(&root).map_err(|_| "target outside root")?;
 
     let backups_dir = root.join("backups");
@@ -55,13 +57,14 @@ mod tests {
     fn keeps_newest_n_and_drops_older() {
         with_claude(|claude| {
             let f = claude.join("CLAUDE.md");
-            let root = claude.canonicalize().unwrap();
-            let base = root.join("backups").join("CLAUDE.md");
+            // jail::resolve returns non-canonical paths rooted at ~/.claude, so
+            // exercise rotate the same way (no canonicalize).
+            let base = claude.join("backups").join("CLAUDE.md");
 
             // 7 saves; only KEEP backups should survive.
             for i in 0..7 {
                 fs::write(&f, format!("v{i}")).unwrap();
-                rotate(&f.canonicalize().unwrap()).unwrap();
+                rotate(&f).unwrap();
             }
             let existing: Vec<_> = (0..10).filter(|n| bak_path(&base, *n).exists()).collect();
             assert_eq!(existing.len(), KEEP);

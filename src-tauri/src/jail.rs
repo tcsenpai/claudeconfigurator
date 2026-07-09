@@ -9,50 +9,36 @@ pub fn root() -> Result<PathBuf, String> {
     Ok(Path::new(&home).join(".claude"))
 }
 
-/// Resolve a caller-supplied path and guarantee it stays inside `~/.claude`.
+/// Resolve a caller-supplied path and guarantee its *entry point* stays inside
+/// `~/.claude`. Returns the path rooted at `~/.claude` WITHOUT following
+/// symlinks, so a symlink legitimately placed under `~/.claude` (e.g. a skill
+/// symlinked to a plugin cache or an external repo) can still be read and
+/// written through. Traversal via `..` is rejected.
 ///
-/// Accepts either an absolute path already under root, or a path relative to
-/// root. Rejects anything that escapes (via `..`, symlinks, or absolute paths
-/// pointing elsewhere). Returns the canonical path on success.
-///
-/// For not-yet-existing paths (new files) we canonicalize the parent dir and
-/// re-append the final component, so writes to new files still get jailed.
+/// Trust model: anyone who can plant a symlink under `~/.claude` already
+/// controls the config directory, so following such symlinks is the user's
+/// intent — the jail exists to stop *caller-supplied* paths (from the UI) from
+/// escaping, which `..` rejection + root-prefix on the pre-symlink path covers.
 pub fn resolve(input: &str) -> Result<PathBuf, String> {
     let root = root()?;
-    let root_c = canonical_existing(&root)?;
 
     let raw = {
         let p = Path::new(input);
         if p.is_absolute() { p.to_path_buf() } else { root.join(p) }
     };
 
-    // Reject `..` components outright — cheap defense before touching the fs.
+    // Reject `..` components — the only lexical way to escape root.
     if raw.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
         return Err("path traversal rejected".into());
     }
 
-    let canon = match raw.canonicalize() {
-        Ok(c) => c,
-        Err(_) => {
-            // Path may not exist yet (new file): jail the parent instead.
-            let parent = raw.parent().ok_or("invalid path")?;
-            let name = raw.file_name().ok_or("invalid path")?;
-            let parent_c = parent
-                .canonicalize()
-                .map_err(|e| format!("cannot resolve parent: {e}"))?;
-            parent_c.join(name)
-        }
-    };
-
-    if canon.starts_with(&root_c) {
-        Ok(canon)
+    // The lexical path must sit under root (guaranteed for relative inputs;
+    // enforced for absolute ones). Symlinks are intentionally not followed.
+    if raw.starts_with(&root) {
+        Ok(raw)
     } else {
         Err("path escapes ~/.claude".into())
     }
-}
-
-fn canonical_existing(p: &Path) -> Result<PathBuf, String> {
-    p.canonicalize().map_err(|e| format!("~/.claude not accessible: {e}"))
 }
 
 #[cfg(test)]
