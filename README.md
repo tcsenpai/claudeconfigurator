@@ -18,6 +18,11 @@ and atomic.
 - **Files**: edit the other root-level `.md` files in `~/.claude`.
 - **Skills, Commands, Agents**: browse entries as cards built from their YAML
   frontmatter, then edit the underlying file.
+- **Create and import**: a `+` button in the Skills, Commands, Agents, and
+  Files views creates a new entry from a name and a starter template, or
+  imports an existing file (or a whole skill folder) from anywhere on disk into
+  `~/.claude`. Commands accept an optional namespace. Existing targets are never
+  overwritten.
 - **Hooks**: a per-event editor for the hooks defined in `settings.json`
   (matcher, command or HTTP hook, timeout, async).
 - **Plugins**: list installed plugins and marketplaces, enable or disable them,
@@ -137,6 +142,7 @@ src/
     EditorPane.svelte       CodeMirror wrapper
     editor.ts               CodeMirror setup, reference decorations and clicks
     JsonNode.svelte         recursive JSON form node
+    AddDialog.svelte        create / import new entries
     nav.svelte.ts           cross-view navigation store
 src-tauri/src/
   jail.rs                   path jail (security boundary)
@@ -146,6 +152,7 @@ src-tauri/src/
   refs.rs                   reference scan and resolution
   settings.rs               structured settings.json access
   plugins.rs                plugin listing, toggle, CLI delegation
+  create.rs                 create / import entries
   fs_cmds.rs                Tauri command surface
 ```
 
