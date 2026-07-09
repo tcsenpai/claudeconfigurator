@@ -66,8 +66,25 @@ bun run tauri dev
 ## Build
 
 ```sh
-bun run tauri build
+./build.sh              # platform default (macOS: app + dmg, Linux: deb + appimage)
+./build.sh --dmg        # macOS installer
+./build.sh --app        # macOS app bundle only
+./build.sh --appimage   # Linux AppImage
+./build.sh --deb        # Linux .deb
 ```
+
+Or invoke Tauri directly: `bun run tauri build`.
+
+## Install
+
+After building, install the bundle onto the current system:
+
+```sh
+./install.sh
+```
+
+On macOS this copies the `.app` into `/Applications`. On Linux it installs the
+`.deb` or `.rpm` (with sudo), or copies the AppImage into `~/.local/bin`.
 
 ## Tests
 
