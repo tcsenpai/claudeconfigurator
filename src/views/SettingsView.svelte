@@ -1,16 +1,22 @@
 <script lang="ts">
   import { readFile, writeRaw } from "../lib/api";
   import JsonNode from "../lib/JsonNode.svelte";
-  import DocEditor from "../lib/DocEditor.svelte";
 
   const PATH = "settings.json";
+
+  // Single source of truth. Both Form and Raw edit `data`; switching modes
+  // carries unsaved edits because neither reloads from disk.
   let data = $state<unknown>(null);
   let mode = $state<"form" | "raw">("form");
   let dirty = $state(false);
   let saving = $state(false);
   let error = $state("");
 
-  // Load once into the form model.
+  // Raw-mode text buffer + its own parse error (kept separate so a temporarily
+  // invalid edit doesn't corrupt `data`).
+  let rawText = $state("");
+  let rawError = $state("");
+
   $effect(() => {
     readFile(PATH)
       .then((d) => { data = JSON.parse(d.raw); error = ""; })
@@ -19,8 +25,41 @@
 
   function onRoot(v: unknown) { data = v; dirty = true; }
 
+  function enterRaw() {
+    rawText = JSON.stringify(data, null, 2);
+    rawError = "";
+    mode = "raw";
+  }
+
+  function enterForm() {
+    // Commit the raw buffer into `data` before showing the form.
+    if (!syncRaw()) return; // stay in raw if it doesn't parse
+    mode = "form";
+  }
+
+  // Parse rawText into data. Returns true on success.
+  function syncRaw(): boolean {
+    try {
+      data = JSON.parse(rawText);
+      rawError = "";
+      dirty = true;
+      return true;
+    } catch (e) {
+      rawError = String(e);
+      return false;
+    }
+  }
+
+  function onRawInput(text: string) {
+    rawText = text;
+    syncRaw(); // keep `data` live when valid; surface error when not
+  }
+
+  const canSave = $derived(dirty && !saving && (mode === "form" || !rawError));
+
   async function save() {
-    if (saving) return;
+    if (!canSave) return;
+    if (mode === "raw" && !syncRaw()) return;
     saving = true; error = "";
     try {
       await writeRaw(PATH, JSON.stringify(data, null, 2) + "\n", true);
@@ -37,27 +76,27 @@
   <div class="bar">
     <span class="path">{PATH}{dirty ? " •" : ""}</span>
     <div class="actions">
-      <button class:on={mode === "form"} onclick={() => (mode = "form")}>Form</button>
-      <button class:on={mode === "raw"} onclick={() => (mode = "raw")}>Raw</button>
-      {#if mode === "form"}
-        <button onclick={save} disabled={!dirty || saving}>{saving ? "Saving…" : "Save"}</button>
-      {/if}
+      <button class:on={mode === "form"} onclick={enterForm}>Form</button>
+      <button class:on={mode === "raw"} onclick={enterRaw}>Raw</button>
+      <button onclick={save} disabled={!canSave}>{saving ? "Saving…" : "Save"}</button>
     </div>
   </div>
 
   {#if error}<div class="err">{error}</div>{/if}
 
-  {#if mode === "form"}
-    <div class="form">
-      {#if data !== null}
-        <JsonNode value={data} onChange={onRoot} />
-      {:else}
-        <div class="empty">Loading…</div>
-      {/if}
-    </div>
+  {#if data === null}
+    <div class="empty">Loading…</div>
+  {:else if mode === "form"}
+    <div class="form"><JsonNode value={data} onChange={onRoot} /></div>
   {:else}
-    <!-- Raw mode reuses the validated JSON editor. -->
-    <div class="raw"><DocEditor path={PATH} lang="json" validateJson /></div>
+    <div class="raw">
+      {#if rawError}<div class="err">{rawError}</div>{/if}
+      <textarea
+        spellcheck="false"
+        value={rawText}
+        oninput={(e) => onRawInput(e.currentTarget.value)}
+      ></textarea>
+    </div>
   {/if}
 </div>
 
@@ -71,7 +110,12 @@
   .actions { display: flex; gap: 6px; }
   .actions button.on { border-color: var(--accent); color: var(--accent); }
   .form { flex: 1; overflow-y: auto; padding: 10px 12px; }
-  .raw { flex: 1; min-height: 0; }
+  .raw { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .raw textarea {
+    flex: 1; resize: none; border: none; border-radius: 0; padding: 10px 12px;
+    font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.5;
+  }
+  .raw textarea:focus { outline: none; }
   .empty { color: var(--fg-dim); padding: 10px; }
   .err { padding: 8px 10px; background: var(--warn); color: #fff; font-size: 12px; }
 </style>
