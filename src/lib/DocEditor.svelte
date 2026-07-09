@@ -4,14 +4,20 @@
   import DOMPurify from "dompurify";
   import FrontmatterEditor from "./FrontmatterEditor.svelte";
   import EditorPane from "./EditorPane.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   interface Props {
     path: string | null;
     lang?: "markdown" | "json";
     validateJson?: boolean;
     onFollow?: (target: string) => void;
+    /** When set, a red Delete button appears; called after the user confirms.
+     * The parent performs the actual delete (it knows file vs skill-folder). */
+    onDelete?: (() => void) | null;
   }
-  let { path, lang = "markdown", validateJson = false, onFollow = () => {} }: Props = $props();
+  let { path, lang = "markdown", validateJson = false, onFollow = () => {}, onDelete = null }: Props = $props();
+
+  let confirming = $state(false);
 
   let doc = $state<FileDoc | null>(null);
   let fields = $state<Field[]>([]);
@@ -70,6 +76,9 @@
           </button>
         {/if}
         <button onclick={save} disabled={!dirty || saving}>{saving ? "Saving…" : "Save"}</button>
+        {#if onDelete}
+          <button class="danger" onclick={() => (confirming = true)}>Delete</button>
+        {/if}
       </div>
     </div>
     <FrontmatterEditor {fields} onChange={onFields} />
@@ -90,6 +99,14 @@
   <div class="empty">Select a file</div>
 {/if}
 
+{#if confirming && doc}
+  <ConfirmDialog
+    message={`Delete ${doc.path}? A backup is kept in ~/.claude/backups/.`}
+    onCancel={() => (confirming = false)}
+    onConfirm={() => { confirming = false; onDelete?.(); }}
+  />
+{/if}
+
 <style>
   .doc { display: flex; flex-direction: column; height: 100%; }
   .bar {
@@ -98,6 +115,8 @@
   }
   .path { color: var(--fg-dim); font-size: 12px; font-family: ui-monospace, monospace; }
   .actions { display: flex; gap: 6px; }
+  .actions .danger { color: var(--warn); border-color: var(--warn); }
+  .actions .danger:hover { background: var(--warn); color: #fff; }
   .toggle.on { border-color: var(--accent); color: var(--accent); }
   .body { flex: 1; min-height: 0; }
   .md {

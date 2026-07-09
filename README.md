@@ -26,6 +26,10 @@ and atomic.
   imports an existing file (or a whole skill folder) from anywhere on disk into
   `~/.claude`. Commands accept an optional namespace. Existing targets are never
   overwritten.
+- **Delete**: a red `x` on each list row and a Delete button in the editor
+  toolbar remove an entry after a confirmation. Deleting a skill removes its
+  whole folder. The item is copied into `~/.claude/backups/` before removal, so
+  it is recoverable.
 - **Hooks**: a per-event editor for the hooks defined in `settings.json`
   (matcher, command or HTTP hook, timeout, async).
 - **Plugins**: list installed plugins and marketplaces, enable or disable them,

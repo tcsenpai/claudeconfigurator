@@ -3,6 +3,7 @@
 //! ~/.claude. Destinations are always jailed; sources for import are read-only
 //! and may live outside the jail. Never overwrites: an existing target errors.
 
+use crate::backup;
 use crate::jail;
 use serde::Deserialize;
 use std::fs;
@@ -126,6 +127,38 @@ pub fn import_skill_dir(name: String, src: String) -> Result<String, String> {
     Ok(if abs.join("SKILL.md").is_file() { skill_md } else { rel })
 }
 
+/// Delete an entry by its path relative to ~/.claude. A file is backed up
+/// (rotating) then unlinked; a skill directory has every contained file backed
+/// up, then the whole directory is removed. Jailed: the target must resolve
+/// inside ~/.claude. The UI confirms before calling this.
+#[tauri::command]
+pub fn delete_entry(path: String) -> Result<(), String> {
+    let abs = jail::resolve(&path)?;
+    if abs.is_dir() {
+        backup_tree(&abs)?;
+        fs::remove_dir_all(&abs).map_err(|e| e.to_string())
+    } else if abs.is_file() {
+        backup::rotate(&abs)?;
+        fs::remove_file(&abs).map_err(|e| e.to_string())
+    } else {
+        Err(format!("{path} does not exist"))
+    }
+}
+
+/// Back up every file under `dir` (recursively) so a deleted folder is
+/// recoverable from ~/.claude/backups/.
+fn backup_tree(dir: &Path) -> Result<(), String> {
+    for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+        let p = entry.map_err(|e| e.to_string())?.path();
+        if p.is_dir() {
+            backup_tree(&p)?;
+        } else {
+            backup::rotate(&p)?;
+        }
+    }
+    Ok(())
+}
+
 /// Write a brand-new file, creating parent dirs. Caller has already confirmed
 /// the target does not exist. No backup (nothing to back up for a new file).
 fn write_new(abs: &Path, bytes: &[u8]) -> Result<(), String> {
@@ -212,6 +245,38 @@ mod tests {
             let rel = import_skill_dir("imported".into(), src.to_string_lossy().into()).unwrap();
             assert_eq!(rel, "skills/imported/SKILL.md");
             assert!(claude.join("skills/imported/scripts/x.sh").is_file());
+        });
+    }
+
+    #[test]
+    fn delete_file_backs_up_then_removes() {
+        with_claude(|claude| {
+            fs::write(claude.join("NOTE.md"), "bye").unwrap();
+            delete_entry("NOTE.md".into()).unwrap();
+            assert!(!claude.join("NOTE.md").exists());
+            // Recoverable from backups/.
+            let bak = claude.join("backups").join("NOTE.md.0.bak");
+            assert_eq!(fs::read_to_string(bak).unwrap(), "bye");
+        });
+    }
+
+    #[test]
+    fn delete_skill_folder_recursive_with_backup() {
+        with_claude(|claude| {
+            create_entry(Kind::Skill, "doomed".into(), None).unwrap();
+            fs::create_dir_all(claude.join("skills/doomed/scripts")).unwrap();
+            fs::write(claude.join("skills/doomed/scripts/x.sh"), "echo").unwrap();
+            delete_entry("skills/doomed".into()).unwrap();
+            assert!(!claude.join("skills/doomed").exists());
+            // The nested file was backed up before removal.
+            assert!(claude.join("backups/skills/doomed/scripts/x.sh.0.bak").is_file());
+        });
+    }
+
+    #[test]
+    fn delete_missing_errors() {
+        with_claude(|_| {
+            assert!(delete_entry("ghost.md".into()).is_err());
         });
     }
 }

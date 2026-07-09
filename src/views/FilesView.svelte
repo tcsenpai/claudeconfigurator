@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { listRootMd, type FileItem } from "../lib/api";
+  import { listRootMd, deleteEntry, type FileItem } from "../lib/api";
   import DocEditor from "../lib/DocEditor.svelte";
   import AddDialog from "../lib/AddDialog.svelte";
+  import ConfirmDialog from "../lib/ConfirmDialog.svelte";
   import { nav, follow } from "../lib/nav.svelte";
 
   let items = $state<FileItem[]>([]);
   let selected = $state<string | null>(null);
   let adding = $state(false);
+  let pendingDelete = $state<FileItem | null>(null);
 
   function reload() { return listRootMd().then((f) => (items = f)); }
   $effect(() => { reload(); });
@@ -24,6 +26,13 @@
     await reload();
     selected = path;
   }
+
+  async function doDelete(path: string) {
+    pendingDelete = null;
+    await deleteEntry(path);
+    if (selected === path) selected = null;
+    await reload();
+  }
 </script>
 
 <div class="split">
@@ -35,18 +44,31 @@
     <ul>
       {#each items as it (it.path)}
         <li class:active={selected === it.path}>
-          <button onclick={() => (selected = it.path)}>{it.name}</button>
+          <button class="name" onclick={() => (selected = it.path)}>{it.name}</button>
+          <button class="del" title="Delete {it.name}" onclick={() => (pendingDelete = it)}>×</button>
         </li>
       {/each}
     </ul>
   </div>
   <div class="detail">
-    <DocEditor path={selected} onFollow={follow} />
+    <DocEditor
+      path={selected}
+      onFollow={follow}
+      onDelete={selected ? () => doDelete(selected!) : null}
+    />
   </div>
 </div>
 
 {#if adding}
   <AddDialog kind="file" onClose={() => (adding = false)} onCreated={onCreated} />
+{/if}
+
+{#if pendingDelete}
+  <ConfirmDialog
+    message={`Delete ${pendingDelete.path}? A backup is kept in ~/.claude/backups/.`}
+    onCancel={() => (pendingDelete = null)}
+    onConfirm={() => doDelete(pendingDelete!.path)}
+  />
 {/if}
 
 <style>
@@ -56,10 +78,20 @@
   .toolbar { display: flex; align-items: center; gap: 4px; padding: 6px; }
   .toolbar .label { flex: 1; font-size: 12px; color: var(--fg-dim); }
   .add { padding: 0 10px; font-size: 15px; line-height: 1; }
-  .list li button {
-    width: 100%; text-align: left; background: none; border: none; padding: 5px 8px; border-radius: 4px;
-    font-family: ui-monospace, monospace; font-size: 12px;
+  .list li {
+    display: flex; align-items: stretch; border-radius: 4px; overflow: hidden;
   }
-  .list li.active button { background: var(--bg-hover); color: var(--accent); }
+  .list li:hover { background: var(--bg-hover); }
+  .list li.active { background: var(--bg-hover); }
+  .list li .name {
+    flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 5px 8px;
+    font-family: ui-monospace, monospace; font-size: 12px; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .list li.active .name { color: var(--accent); }
+  .del {
+    background: none; border: none; color: var(--fg-dim); padding: 0 8px; font-size: 15px; line-height: 1;
+  }
+  .del:hover { background: var(--warn); color: #fff; }
   .detail { min-width: 0; }
 </style>

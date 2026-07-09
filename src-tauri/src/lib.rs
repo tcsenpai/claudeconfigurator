@@ -32,6 +32,7 @@ pub fn run() {
             create::create_entry,
             create::import_file,
             create::import_skill_dir,
+            create::delete_entry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -65,3 +65,4 @@ export const importFile = (kind: Kind, name: string, src: string, namespace?: st
   invoke<string>("import_file", { kind, name, src, namespace: namespace || null });
 export const importSkillDir = (name: string, src: string) =>
   invoke<string>("import_skill_dir", { name, src });
+export const deleteEntry = (path: string) => invoke<void>("delete_entry", { path });
