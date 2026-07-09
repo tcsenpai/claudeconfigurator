@@ -3,11 +3,15 @@
 Minimal desktop GUI to configure Claude Code by editing `~/.claude`.
 Tauri 2 + Svelte 5 + CodeMirror 6. Rust owns the filesystem, path-jailed to `~/.claude`.
 
-## Features (v1)
+## Features
 
-- **Files** — edit `CLAUDE.md` and adjacent root `.md` files.
+- **CLAUDE.md** — dedicated tab for the entrypoint file.
+- **Files** — edit adjacent root `.md` files.
 - **Skills / Commands / Agents** — browse cards from frontmatter, edit `SKILL.md` / command / agent files.
-- **Settings** — edit `settings.json` with JSON validation on save.
+- **Hooks** — per-event editor for `settings.json` hooks (matcher + command/http hooks, timeout, async).
+- **Plugins** — list installed plugins + marketplaces, enable/disable toggle; install/remove/add-marketplace shell out to the `claude` CLI (no reimplementation of its plugin lifecycle).
+- **Settings** — recursive JSON form (every nested key editable) with a raw-JSON fallback; validated on save.
+- **Markdown preview** — toggle any markdown file between source (with `@`-highlight) and rendered view.
 - **`@`-references** — highlighted in markdown; ctrl/cmd+click follows the target (file path, or `@skill`/`@command`/`@agent` name) into the right view.
 - **Generic frontmatter editor** — every YAML key becomes a field (text / chip-list); unknown/nested keys shown read-only.
 - **Rotating backups** — each save copies the file to `~/.claude/backups/…` (keeps newest 5). Writes are atomic.
@@ -59,5 +63,7 @@ src-tauri/src/
   backup.rs               rotating backups
   index.rs                skills/commands/agents catalog
   refs.rs                 @-ref scan + resolve
+  settings.rs             structured settings.json access (hooks, nested keys)
+  plugins.rs              plugin list/toggle + shell-out to `claude`
   fs_cmds.rs              Tauri command surface
 ```

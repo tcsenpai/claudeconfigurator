@@ -7,7 +7,7 @@ interface NavState {
   request: string | null;
 }
 
-export const nav = $state<NavState>({ view: "files", request: null });
+export const nav = $state<NavState>({ view: "claude", request: null });
 
 /** Map a relative path to the view that owns it. */
 export function viewForPath(path: string): string {

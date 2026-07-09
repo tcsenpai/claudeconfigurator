@@ -32,3 +32,26 @@ export const writeRaw = (path: string, content: string, validateJson = false) =>
 export const catalog = () => invoke<Catalog>("catalog");
 export const scanRefs = (body: string, dir: string) =>
   invoke<Ref[]>("scan_refs", { body, dir });
+
+// --- settings (structured) ---
+export const settingsGet = <T = unknown>(key: string) => invoke<T>("settings_get", { key });
+export const settingsSet = (key: string, value: unknown) =>
+  invoke<void>("settings_set", { key, value });
+
+// --- plugins ---
+export interface Plugin {
+  id: string;
+  name: string;
+  marketplace: string;
+  version: string;
+  enabled: boolean;
+}
+export interface Marketplace { name: string; repo: string; source: string }
+export interface PluginData { plugins: Plugin[]; marketplaces: Marketplace[] }
+
+export const pluginsList = () => invoke<PluginData>("plugins_list");
+export const pluginSetEnabled = (id: string, enabled: boolean) =>
+  invoke<void>("plugin_set_enabled", { id, enabled });
+export const pluginInstall = (id: string) => invoke<string>("plugin_install", { id });
+export const pluginRemove = (id: string) => invoke<string>("plugin_remove", { id });
+export const marketplaceAdd = (repo: string) => invoke<string>("marketplace_add", { repo });

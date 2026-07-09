@@ -3,7 +3,9 @@ mod frontmatter;
 mod fs_cmds;
 mod index;
 mod jail;
+mod plugins;
 mod refs;
+mod settings;
 #[cfg(test)]
 mod testutil;
 
@@ -18,6 +20,13 @@ pub fn run() {
             fs_cmds::write_raw,
             fs_cmds::catalog,
             fs_cmds::scan_refs,
+            settings::settings_get,
+            settings::settings_set,
+            plugins::plugins_list,
+            plugins::plugin_set_enabled,
+            plugins::plugin_install,
+            plugins::plugin_remove,
+            plugins::marketplace_add,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
