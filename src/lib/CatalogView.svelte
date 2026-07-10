@@ -133,5 +133,7 @@
   .name { font-size: 12px; font-family: ui-monospace, monospace; color: var(--fg); }
   .desc { font-size: 11px; color: var(--fg-dim); margin-top: 2px; line-height: 1.35;
     display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .detail { min-width: 0; }
+  /* min-height: 0 lets the grid item shrink to the row so the editor's
+     internal scroller gets a bounded height instead of growing to content. */
+  .detail { min-width: 0; min-height: 0; overflow: hidden; }
 </style>

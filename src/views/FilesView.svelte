@@ -93,5 +93,5 @@
     background: none; border: none; color: var(--fg-dim); padding: 0 8px; font-size: 15px; line-height: 1;
   }
   .del:hover { background: var(--warn); color: #fff; }
-  .detail { min-width: 0; }
+  .detail { min-width: 0; min-height: 0; overflow: hidden; }
 </style>
