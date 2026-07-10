@@ -8,6 +8,7 @@ import GraphView from "./GraphView.svelte";
 import HooksView from "./HooksView.svelte";
 import PluginsView from "./PluginsView.svelte";
 import SettingsView from "./SettingsView.svelte";
+import PreferencesView from "./PreferencesView.svelte";
 
 export interface View {
   id: string;
@@ -26,4 +27,5 @@ export const views: View[] = [
   { id: "hooks", label: "Hooks", component: HooksView },
   { id: "plugins", label: "Plugins", component: PluginsView },
   { id: "settings", label: "Settings", component: SettingsView },
+  { id: "prefs", label: "⚙ Preferences", component: PreferencesView },
 ];

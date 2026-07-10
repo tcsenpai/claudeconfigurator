@@ -2,9 +2,11 @@
   import { readFile, writeFile, type Field, type FileDoc } from "./api";
   import { marked } from "marked";
   import DOMPurify from "dompurify";
+  import { onDestroy } from "svelte";
   import FrontmatterEditor from "./FrontmatterEditor.svelte";
   import EditorPane from "./EditorPane.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import { appConfig } from "./appConfig.svelte";
 
   interface Props {
     path: string | null;
@@ -37,6 +39,7 @@
   // Load whenever `path` changes.
   $effect(() => {
     const p = path;
+    clearTimeout(autosaveTimer);
     doc = null; error = ""; dirty = false;
     if (!p) return;
     readFile(p)
@@ -44,8 +47,21 @@
       .catch((e) => (error = String(e)));
   });
 
-  function onFields(next: Field[]) { fields = next; dirty = true; }
-  function onBody(next: string) { body = next; dirty = true; }
+  // Debounced autosave. Reset on every edit; fires after the configured
+  // inactivity delay if autosave is on and there are unsaved changes.
+  let autosaveTimer: number | undefined;
+  function scheduleAutosave() {
+    clearTimeout(autosaveTimer);
+    if (!appConfig.autosave) return;
+    autosaveTimer = setTimeout(() => {
+      if (dirty && !saving) save();
+    }, appConfig.autosave_delay_ms) as unknown as number;
+  }
+
+  function onFields(next: Field[]) { fields = next; dirty = true; scheduleAutosave(); }
+  function onBody(next: string) { body = next; dirty = true; scheduleAutosave(); }
+
+  onDestroy(() => clearTimeout(autosaveTimer));
 
   async function save() {
     if (!path || saving) return;

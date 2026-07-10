@@ -1,3 +1,4 @@
+mod appconfig;
 mod backup;
 mod create;
 mod frontmatter;
@@ -36,6 +37,8 @@ pub fn run() {
             create::import_skill_dir,
             create::delete_entry,
             graph::graph_data,
+            appconfig::app_config_get,
+            appconfig::app_config_set,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

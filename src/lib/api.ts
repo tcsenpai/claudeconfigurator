@@ -53,6 +53,14 @@ export interface SchemaProp {
 }
 export const settingsSchema = () => invoke<JsonSchema>("settings_schema");
 
+// --- app preferences (the app's own config, not ~/.claude) ---
+export interface AppConfig {
+  autosave: boolean;
+  autosave_delay_ms: number;
+}
+export const appConfigGet = () => invoke<AppConfig>("app_config_get");
+export const appConfigSet = (config: AppConfig) => invoke<void>("app_config_set", { config });
+
 // --- plugins ---
 export interface Plugin {
   id: string;

@@ -59,6 +59,12 @@ and atomic.
 - **Rotating backups**: each save copies the previous file content to
   `~/.claude/backups/`, keeping the five most recent versions. Writes are
   performed atomically (temp file plus rename).
+- **Preferences**: a `Preferences` tab holds the app's own settings (stored
+  outside `~/.claude`, in the platform app-config directory). It includes
+  autosave: when on, an edited file saves automatically after a configurable
+  inactivity delay (default 5s, off by default). Autosave uses the same
+  validation and backup as a manual save, and applies to the markdown editors
+  (not the Claude `settings.json` editor).
 
 ## Safety
 
@@ -194,7 +200,8 @@ src-tauri/src/
   graph.rs                  dependency graph (nodes + edges)
   settings.rs               structured settings.json access
   plugins.rs                plugin listing, toggle, CLI delegation
-  create.rs                 create / import entries
+  create.rs                 create / import / delete entries
+  appconfig.rs              the app's own preferences (autosave)
   fs_cmds.rs                Tauri command surface
 ```
 

@@ -1,6 +1,9 @@
 <script lang="ts">
   import { views } from "./views/registry";
   import { nav } from "./lib/nav.svelte";
+  import { loadAppConfig } from "./lib/appConfig.svelte";
+
+  loadAppConfig();
 
   const active = $derived(views.find((v) => v.id === nav.view) ?? views[0]);
   const Active = $derived(active.component);
