@@ -6,6 +6,7 @@ mod fs_cmds;
 mod graph;
 mod index;
 mod jail;
+mod mcp;
 mod plugins;
 mod refs;
 mod settings;
@@ -39,6 +40,10 @@ pub fn run() {
             graph::graph_data,
             appconfig::app_config_get,
             appconfig::app_config_set,
+            mcp::mcp_list,
+            mcp::mcp_upsert,
+            mcp::mcp_remove,
+            mcp::mcp_set_enabled,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

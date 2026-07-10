@@ -7,6 +7,7 @@ import AgentsView from "./AgentsView.svelte";
 import GraphView from "./GraphView.svelte";
 import HooksView from "./HooksView.svelte";
 import PluginsView from "./PluginsView.svelte";
+import McpView from "./McpView.svelte";
 import SettingsView from "./SettingsView.svelte";
 import PreferencesView from "./PreferencesView.svelte";
 
@@ -26,6 +27,7 @@ export const views: View[] = [
   { id: "graph", label: "Graph", component: GraphView },
   { id: "hooks", label: "Hooks", component: HooksView },
   { id: "plugins", label: "Plugins", component: PluginsView },
+  { id: "mcp", label: "MCP", component: McpView },
   { id: "settings", label: "Settings", component: SettingsView },
   { id: "prefs", label: "⚙ Preferences", component: PreferencesView },
 ];

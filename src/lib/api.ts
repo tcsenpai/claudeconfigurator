@@ -61,6 +61,19 @@ export interface AppConfig {
 export const appConfigGet = () => invoke<AppConfig>("app_config_get");
 export const appConfigSet = (config: AppConfig) => invoke<void>("app_config_set", { config });
 
+// --- MCP servers (from ~/.claude.json) ---
+export interface McpServer {
+  name: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+}
+export const mcpList = () => invoke<McpServer[]>("mcp_list");
+export const mcpUpsert = (name: string, config: Record<string, unknown>, enabled: boolean) =>
+  invoke<void>("mcp_upsert", { name, config, enabled });
+export const mcpRemove = (name: string) => invoke<void>("mcp_remove", { name });
+export const mcpSetEnabled = (name: string, enabled: boolean) =>
+  invoke<void>("mcp_set_enabled", { name, enabled });
+
 // --- plugins ---
 export interface Plugin {
   id: string;

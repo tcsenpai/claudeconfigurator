@@ -35,6 +35,11 @@ and atomic.
 - **Plugins**: list installed plugins and marketplaces, enable or disable them,
   and install, remove, or add a marketplace. Lifecycle operations are delegated
   to the `claude` CLI rather than reimplemented.
+- **MCP**: manage MCP servers from `~/.claude.json`. List, add, edit, remove,
+  and enable or disable each server (stdio `command`/`args`/`env` or remote
+  `type`/`url`/`headers`). Disabling moves a server to a stash key so its config
+  is not lost. Writes are surgical (only the MCP keys change; the rest of
+  `~/.claude.json` is preserved) and the whole file is backed up first.
 - **Graph**: a dependency graph of the config. Nodes are files (plus
   `settings.json` and the hook scripts it invokes); edges are `@`-references and
   hook script invocations. It shows an ego-graph around a focused file (default
@@ -200,6 +205,7 @@ src-tauri/src/
   graph.rs                  dependency graph (nodes + edges)
   settings.rs               structured settings.json access
   plugins.rs                plugin listing, toggle, CLI delegation
+  mcp.rs                    MCP servers in ~/.claude.json (surgical edits)
   create.rs                 create / import / delete entries
   appconfig.rs              the app's own preferences (autosave)
   fs_cmds.rs                Tauri command surface
