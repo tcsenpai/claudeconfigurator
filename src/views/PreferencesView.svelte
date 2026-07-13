@@ -1,5 +1,6 @@
 <script lang="ts">
   import { appConfig, saveAppConfig } from "../lib/appConfig.svelte";
+  import BackupSection from "../lib/BackupSection.svelte";
 
   let saved = $state(false);
 
@@ -46,6 +47,8 @@
         onchange={(e) => setDelay(e.currentTarget.valueAsNumber)} />
     </label>
   </section>
+
+  <BackupSection />
 </div>
 
 <style>

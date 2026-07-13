@@ -1,5 +1,6 @@
 mod appconfig;
 mod backup;
+mod bundle;
 mod create;
 mod frontmatter;
 mod fs_cmds;
@@ -44,6 +45,10 @@ pub fn run() {
             mcp::mcp_upsert,
             mcp::mcp_remove,
             mcp::mcp_set_enabled,
+            bundle::bundle_scan_secrets,
+            bundle::bundle_export,
+            bundle::bundle_preview,
+            bundle::bundle_restore,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

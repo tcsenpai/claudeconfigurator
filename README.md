@@ -70,6 +70,15 @@ and atomic.
   inactivity delay (default 5s, off by default). Autosave uses the same
   validation and backup as a manual save, and applies to the markdown editors
   (not the Claude `settings.json` editor).
+- **Export / restore**: the `Preferences` tab can export the whole
+  configuration as a portable `.tar.gz` and restore one. The bundle captures the
+  real config (instruction files, skills, commands, agents, `settings.json`, MCP
+  servers from `~/.claude.json`, and a reinstallable plugins manifest) but not
+  the multi-GB runtime caches, sessions, or history. Symlinked skills are
+  dereferenced so the archive is self-contained; secrets can be redacted before
+  export. Restore always snapshots the current config first (fail-closed), never
+  deletes local files or MCP servers, and offers Overlay or per-file Merge. A
+  standalone `restore.sh` inside the archive works without the app.
 
 ## Safety
 
@@ -208,6 +217,7 @@ src-tauri/src/
   mcp.rs                    MCP servers in ~/.claude.json (surgical edits)
   create.rs                 create / import / delete entries
   appconfig.rs              the app's own preferences (autosave)
+  bundle.rs                 export / restore the whole configuration
   fs_cmds.rs                Tauri command surface
 ```
 

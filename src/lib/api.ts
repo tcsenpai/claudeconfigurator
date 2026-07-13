@@ -74,6 +74,25 @@ export const mcpRemove = (name: string) => invoke<void>("mcp_remove", { name });
 export const mcpSetEnabled = (name: string, enabled: boolean) =>
   invoke<void>("mcp_set_enabled", { name, enabled });
 
+// --- config bundle (export / restore) ---
+export interface SecretHit { location: string }
+export interface RestorePreview {
+  version: number;
+  created_at: string;
+  redacted: boolean;
+  redactions: string[];
+  conflicts: string[];
+  new_files: string[];
+  plugin_install_cmds: string[];
+}
+export const bundleScanSecrets = () => invoke<SecretHit[]>("bundle_scan_secrets");
+export const bundleExport = (dest: string, redact: boolean, timestamp: string) =>
+  invoke<void>("bundle_export", { dest, redact, timestamp });
+export const bundlePreview = (archive: string) => invoke<RestorePreview>("bundle_preview", { archive });
+export const bundleRestore = (
+  archive: string, mode: "replace" | "merge", replaceFiles: string[], timestamp: string,
+) => invoke<void>("bundle_restore", { archive, mode, replaceFiles, timestamp });
+
 // --- plugins ---
 export interface Plugin {
   id: string;
