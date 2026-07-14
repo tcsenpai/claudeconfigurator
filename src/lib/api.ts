@@ -93,6 +93,14 @@ export const bundleRestore = (
   archive: string, mode: "replace" | "merge", replaceFiles: string[], timestamp: string,
 ) => invoke<void>("bundle_restore", { archive, mode, replaceFiles, timestamp });
 
+// --- scope (global vs project) ---
+export interface ScopeInfo { kind: "global" | "project"; label: string; path: string }
+export interface OpenResult { status: "opened" | "no-claude"; info: ScopeInfo | null }
+export const scopeGet = () => invoke<ScopeInfo>("scope_get");
+export const scopeSetGlobal = () => invoke<ScopeInfo>("scope_set_global");
+export const scopeOpenProject = (path: string) => invoke<OpenResult>("scope_open_project", { path });
+export const scopeCreateClaude = (path: string) => invoke<ScopeInfo>("scope_create_claude", { path });
+
 // --- plugins ---
 export interface Plugin {
   id: string;

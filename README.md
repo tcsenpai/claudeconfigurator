@@ -6,7 +6,9 @@
 A minimal desktop application for configuring Claude Code by editing the files
 under `~/.claude`. It provides a focused GUI over the configuration surface:
 the entrypoint `CLAUDE.md`, adjacent instruction files, skills, commands,
-agents, hooks, plugins, and `settings.json`.
+agents, hooks, plugins, and `settings.json`. It can also switch scope to edit
+any project's Claude config (`<project>/.claude` plus the project's root
+`CLAUDE.md` and `.mcp.json`).
 
 Built with Tauri 2, Svelte 5, and CodeMirror 6. The Rust core owns all
 filesystem access and is path-jailed to `~/.claude`. Every write is backed up
@@ -80,10 +82,21 @@ and atomic.
   deletes local files or MCP servers, and offers Overlay or per-file Merge. A
   standalone `restore.sh` inside the archive works without the app.
 
+## Scope: global or a project
+
+A scope selector at the top of the sidebar switches between the global
+`~/.claude` and any project you open. Pick a folder; if it contains a `.claude/`
+directory the app edits that project's config (and its root `CLAUDE.md` /
+`.mcp.json`); if not, it offers to create one. Tabs that only apply globally
+(Plugins, the whole-config export/restore) are hidden in project scope. Project
+MCP servers are read from the project's `.mcp.json`; disabling one keeps its
+config in an app-owned sidecar so the committed `.mcp.json` stays clean.
+
 ## Safety
 
-- All filesystem paths are canonicalized and rejected if they resolve outside
-  `~/.claude`. This is the single security boundary.
+- All filesystem paths are rejected if they resolve outside the active scope's
+  config directory (`~/.claude`, or `<project>/.claude` plus the two whitelisted
+  project-root files). This is the single security boundary.
 - `settings.json` is parsed and validated before any write; invalid JSON is
   refused.
 - Backups are written before every save.
@@ -206,7 +219,8 @@ src/
     AddDialog.svelte        create / import new entries
     nav.svelte.ts           cross-view navigation store
 src-tauri/src/
-  jail.rs                   path jail (security boundary)
+  scope.rs                  active scope (global vs project)
+  jail.rs                   path jail (security boundary, scope-aware)
   frontmatter.rs            YAML split, parse, round-trip
   backup.rs                 rotating backups
   index.rs                  skills/commands/agents catalog

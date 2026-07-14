@@ -8,7 +8,25 @@ use crate::jail;
 use crate::refs::{self, Ref};
 use serde::Serialize;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+/// Sentinel prefix for a whitelisted project-root file (CLAUDE.md / .mcp.json),
+/// which lives OUTSIDE the config dir in project scope. `@root/CLAUDE.md`.
+const ROOT_PREFIX: &str = "@root/";
+
+/// Resolve either a normal in-config-dir path or a `@root/<name>` root file.
+fn resolve_any(path: &str) -> Result<PathBuf, String> {
+    if let Some(name) = path.strip_prefix(ROOT_PREFIX) {
+        // .mcp.json / ~/.claude.json must only be mutated via the surgical mcp
+        // commands, never whole-file overwritten through the generic editor.
+        if name == ".mcp.json" {
+            return Err("edit MCP servers via the MCP tab, not as a raw file".into());
+        }
+        jail::resolve_root_file(name)
+    } else {
+        jail::resolve(path)
+    }
+}
 
 /// A file listing entry for the Files view.
 #[derive(Serialize)]
@@ -29,6 +47,8 @@ pub struct FileDoc {
 }
 
 /// List the root-level `.md` files (CLAUDE.md + adjacent) for the Files view.
+/// In project scope the project-root `CLAUDE.md` (which lives above the config
+/// dir) is included as `@root/CLAUDE.md`.
 #[tauri::command]
 pub fn list_root_md() -> Result<Vec<FileItem>, String> {
     let root = jail::root()?;
@@ -42,6 +62,15 @@ pub fn list_root_md() -> Result<Vec<FileItem>, String> {
             path: p.strip_prefix(&root).unwrap_or(&p).to_string_lossy().into_owned(),
         })
         .collect();
+    // Project-root CLAUDE.md (outside the config dir) via the root-file route.
+    if let Ok(claude) = jail::resolve_root_file("CLAUDE.md") {
+        if claude.is_file() && claude.parent() != Some(root.as_path()) {
+            items.push(FileItem {
+                name: "CLAUDE.md (project root)".into(),
+                path: format!("{ROOT_PREFIX}CLAUDE.md"),
+            });
+        }
+    }
     items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     Ok(items)
 }
@@ -49,7 +78,7 @@ pub fn list_root_md() -> Result<Vec<FileItem>, String> {
 /// Read + parse a file into fields + body.
 #[tauri::command]
 pub fn read_file(path: String) -> Result<FileDoc, String> {
-    let abs = jail::resolve(&path)?;
+    let abs = resolve_any(&path)?;
     let raw = fs::read_to_string(&abs).map_err(|e| e.to_string())?;
     let (fm, body) = frontmatter::split(&raw);
     let fields = fm.map(frontmatter::parse_fields).unwrap_or_default();
@@ -72,7 +101,7 @@ pub fn write_file(
     body: String,
     validate_json: bool,
 ) -> Result<(), String> {
-    let abs = jail::resolve(&path)?;
+    let abs = resolve_any(&path)?;
     let content = if fields.is_empty() {
         body
     } else {
@@ -111,4 +140,39 @@ fn atomic_write(target: &Path, content: &str) -> Result<(), String> {
     let tmp = target.with_extension("cctmp");
     fs::write(&tmp, content).map_err(|e| e.to_string())?;
     fs::rename(&tmp, target).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::with_claude;
+
+    #[test]
+    fn writes_project_root_claude_md_and_backs_up() {
+        with_claude(|claude| {
+            let proj = claude.parent().unwrap().join("wproj");
+            fs::create_dir_all(proj.join(".claude")).unwrap();
+            fs::write(proj.join("CLAUDE.md"), "old\n").unwrap();
+            crate::scope::set_project_for_test(&proj);
+
+            write_file("@root/CLAUDE.md".into(), vec![], "new\n".into(), false).unwrap();
+            // Wrote the PROJECT ROOT file, not <proj>/.claude/CLAUDE.md.
+            assert_eq!(fs::read_to_string(proj.join("CLAUDE.md")).unwrap(), "new\n");
+            // Backup of the prior content landed under backups/_root/.
+            let bak = proj.join(".claude/backups/_root/CLAUDE.md.0.bak");
+            assert_eq!(fs::read_to_string(bak).unwrap(), "old\n");
+
+            crate::scope::set_global_for_test();
+        });
+    }
+
+    #[test]
+    fn resolve_any_rejects_escape_and_raw_mcp() {
+        with_claude(|_| {
+            assert!(resolve_any("@root/../../etc/passwd").is_err());
+            assert!(resolve_any("@root/secrets.env").is_err());
+            assert!(resolve_any("@root/.mcp.json").is_err()); // must use MCP tab
+            assert!(resolve_any("../escape").is_err());
+        });
+    }
 }

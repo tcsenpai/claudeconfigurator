@@ -1,12 +1,23 @@
-//! Path jail: every filesystem path must resolve inside `~/.claude`.
-//! This is the single security boundary — all fs commands go through `resolve`.
+//! Path jail: every filesystem path must resolve inside the active scope's
+//! config dir. This is the single security boundary — all fs commands go
+//! through `resolve`. The root is the active scope (global `~/.claude` or a
+//! project's `<proj>/.claude`), so switching scope retargets everything.
 
+use crate::scope;
 use std::path::{Path, PathBuf};
 
-/// Root of the config surface we're allowed to touch: `~/.claude`.
+/// Root of the config surface we're allowed to touch: the active scope's config
+/// dir (`~/.claude` globally, `<proj>/.claude` in a project).
 pub fn root() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME").ok_or("HOME not set")?;
-    Ok(Path::new(&home).join(".claude"))
+    scope::config_dir()
+}
+
+/// Resolve a whitelisted project-root file (`CLAUDE.md` or `.mcp.json`). These
+/// live OUTSIDE the config dir in project scope, so they get an explicit
+/// allowlisted resolver rather than going through `resolve` (which would reject
+/// them as escaping root).
+pub fn resolve_root_file(name: &str) -> Result<PathBuf, String> {
+    scope::root_file(name)
 }
 
 /// Resolve a caller-supplied path and guarantee its *entry point* stays inside
@@ -75,6 +86,26 @@ mod tests {
         with_claude(|_| {
             // File doesn't exist yet but parent (root) does.
             assert!(resolve("newfile.md").is_ok());
+        });
+    }
+
+    #[test]
+    fn project_scope_maps_relative_and_root_files() {
+        with_claude(|claude| {
+            let proj = claude.parent().unwrap().join("jproj");
+            fs::create_dir_all(proj.join(".claude/skills")).unwrap();
+            crate::scope::set_project_for_test(&proj);
+
+            // Relative paths resolve under <proj>/.claude.
+            assert_eq!(resolve("skills/x").unwrap(), proj.join(".claude/skills/x"));
+            // Traversal still rejected.
+            assert!(resolve("../outside").is_err());
+            // Whitelisted root files map to the project root, not .claude/.
+            assert_eq!(resolve_root_file("CLAUDE.md").unwrap(), proj.join("CLAUDE.md"));
+            // Non-whitelisted root file rejected.
+            assert!(resolve_root_file("secrets.env").is_err());
+
+            crate::scope::set_global_for_test();
         });
     }
 }

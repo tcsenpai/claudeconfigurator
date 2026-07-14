@@ -2,43 +2,57 @@
   import { views } from "./views/registry";
   import { nav } from "./lib/nav.svelte";
   import { loadAppConfig } from "./lib/appConfig.svelte";
+  import { scope, loadScope, isProject } from "./lib/scope.svelte";
+  import ScopeSelector from "./lib/ScopeSelector.svelte";
 
   loadAppConfig();
+  loadScope();
 
-  const active = $derived(views.find((v) => v.id === nav.view) ?? views[0]);
+  // Tabs available in the active scope (project hides global-only views).
+  const shown = $derived(isProject() ? views.filter((v) => v.project) : views);
+
+  // If the current tab isn't available in this scope, fall back to the first.
+  $effect(() => {
+    if (!shown.some((v) => v.id === nav.view)) nav.view = shown[0].id;
+  });
+
+  const active = $derived(shown.find((v) => v.id === nav.view) ?? shown[0]);
   const Active = $derived(active.component);
 </script>
 
 <div class="app">
   <nav class="sidebar">
     <div class="brand">.claude</div>
-    {#each views as v (v.id)}
-      <button class:active={v.id === nav.view} onclick={() => (nav.view = v.id)}>{v.label}</button>
-    {/each}
+    <ScopeSelector />
+    <div class="tabs">
+      {#each shown as v (v.id)}
+        <button class:active={v.id === nav.view} onclick={() => (nav.view = v.id)}>{v.label}</button>
+      {/each}
+    </div>
   </nav>
   <main>
-    {#key active.id}
+    <!-- Remount on scope switch (token) so views reload against the new scope. -->
+    {#key `${active.id}:${scope.token}`}
       <Active />
     {/key}
   </main>
 </div>
 
 <style>
-  .app { display: grid; grid-template-columns: 130px 1fr; height: 100vh; }
+  .app { display: grid; grid-template-columns: 150px 1fr; height: 100vh; }
   .sidebar {
     display: flex; flex-direction: column; gap: 2px; padding: 8px 6px;
-    background: var(--bg-alt); border-right: 1px solid var(--border);
+    background: var(--bg-alt); border-right: 1px solid var(--border); min-height: 0;
   }
   .brand {
     font-family: ui-monospace, monospace; color: var(--accent); font-size: 13px;
-    padding: 4px 8px 10px; letter-spacing: 0.5px;
+    padding: 4px 8px 8px; letter-spacing: 0.5px;
   }
-  .sidebar button {
+  .tabs { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; margin-top: 4px; }
+  .tabs button {
     text-align: left; background: none; border: none; padding: 6px 8px; border-radius: 5px; color: var(--fg-dim);
   }
-  .sidebar button:hover { background: var(--bg-hover); color: var(--fg); }
-  .sidebar button.active { background: var(--bg-hover); color: var(--accent); }
-  /* min-height: 0 lets this grid item shrink to the 100vh row instead of
-     growing to fit content, so inner overflow-y: auto panes actually scroll. */
+  .tabs button:hover { background: var(--bg-hover); color: var(--fg); }
+  .tabs button.active { background: var(--bg-hover); color: var(--accent); }
   main { min-width: 0; min-height: 0; overflow: hidden; }
 </style>

@@ -19,6 +19,9 @@ pub fn with_claude<T>(f: impl FnOnce(&PathBuf) -> T) -> T {
     let claude = tmp.join(".claude");
     std::fs::create_dir_all(&claude).unwrap();
     std::env::set_var("HOME", &tmp);
+    // Reset the process-global scope so jail::root() re-reads this test's HOME
+    // (scope caches the config dir; without this it'd be stale across tests).
+    crate::scope::set_global_for_test();
     let r = f(&claude);
     let _ = std::fs::remove_dir_all(&tmp);
     r

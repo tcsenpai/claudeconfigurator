@@ -10,6 +10,7 @@ mod jail;
 mod mcp;
 mod plugins;
 mod refs;
+mod scope;
 mod settings;
 #[cfg(test)]
 mod testutil;
@@ -49,6 +50,10 @@ pub fn run() {
             bundle::bundle_export,
             bundle::bundle_preview,
             bundle::bundle_restore,
+            scope::scope_get,
+            scope::scope_set_global,
+            scope::scope_open_project,
+            scope::scope_create_claude,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -48,9 +48,26 @@ fn looks_secret(key: &str) -> bool {
     k.contains("KEY") || k.contains("TOKEN") || k.contains("SECRET") || k.contains("PASSWORD")
 }
 
+/// Export/restore operate on the GLOBAL config (they read/patch ~/.claude.json
+/// directly). Refuse in project scope so a project session can't mix global MCP
+/// with project files. The UI already hides these in project scope; this
+/// enforces the invariant in Rust.
+fn require_global() -> Result<(), String> {
+    if crate::scope::config_dir()? != global_claude_dir()? {
+        return Err("export/restore is only available in the global (~/.claude) scope".into());
+    }
+    Ok(())
+}
+
+fn global_claude_dir() -> Result<PathBuf, String> {
+    let home = std::env::var_os("HOME").ok_or("HOME not set")?;
+    Ok(PathBuf::from(home).join(".claude"))
+}
+
 /// Scan settings.json + ~/.claude.json mcpServers for likely secrets.
 #[tauri::command]
 pub fn bundle_scan_secrets() -> Result<Vec<SecretHit>, String> {
+    require_global()?;
     let root = jail::root()?;
     let mut hits = vec![];
 
@@ -125,6 +142,7 @@ struct Manifest {
 /// `timestamp` is supplied by the caller (Rust can't read wall-clock here).
 #[tauri::command]
 pub fn bundle_export(dest: String, redact: bool, timestamp: String) -> Result<(), String> {
+    require_global()?;
     let root = jail::root()?;
     let staging = unique_temp("ccbundle");
     let _ = fs::remove_dir_all(&staging);
@@ -276,6 +294,7 @@ pub struct RestorePreview {
 /// config/ files vs the current ~/.claude.
 #[tauri::command]
 pub fn bundle_preview(archive: String) -> Result<RestorePreview, String> {
+    require_global()?;
     let dir = extract_to_temp(Path::new(&archive))?;
     let manifest = read_json(&dir.join("manifest.json"))?;
     let version = manifest.get("version").and_then(Value::as_u64).unwrap_or(0) as u32;
@@ -322,6 +341,7 @@ pub fn bundle_restore(
     replace_files: Vec<String>,
     timestamp: String,
 ) -> Result<(), String> {
+    require_global()?;
     let dir = extract_to_temp(Path::new(&archive))?;
     let manifest = read_json(&dir.join("manifest.json"))?;
     let version = manifest.get("version").and_then(Value::as_u64).unwrap_or(0) as u32;

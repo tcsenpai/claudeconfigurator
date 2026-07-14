@@ -15,19 +15,22 @@ export interface View {
   id: string;
   label: string;
   component: Component;
+  /** Shown in project scope? Global-only features set this false. */
+  project?: boolean;
 }
 
 // The extensibility contract: add a module = add a folder + one line here.
+// `project: false` (or omitted) hides a view when a project scope is active.
 export const views: View[] = [
-  { id: "claude", label: "CLAUDE.md", component: ClaudeMdView },
-  { id: "files", label: "Files", component: FilesView },
-  { id: "skills", label: "Skills", component: SkillsView },
-  { id: "commands", label: "Commands", component: CommandsView },
-  { id: "agents", label: "Agents", component: AgentsView },
+  { id: "claude", label: "CLAUDE.md", component: ClaudeMdView }, // global; project edits it via Files
+  { id: "files", label: "Files", component: FilesView, project: true },
+  { id: "skills", label: "Skills", component: SkillsView, project: true },
+  { id: "commands", label: "Commands", component: CommandsView, project: true },
+  { id: "agents", label: "Agents", component: AgentsView, project: true },
   { id: "graph", label: "Graph", component: GraphView },
-  { id: "hooks", label: "Hooks", component: HooksView },
+  { id: "hooks", label: "Hooks", component: HooksView, project: true },
   { id: "plugins", label: "Plugins", component: PluginsView },
-  { id: "mcp", label: "MCP", component: McpView },
-  { id: "settings", label: "Settings", component: SettingsView },
+  { id: "mcp", label: "MCP", component: McpView, project: true },
+  { id: "settings", label: "Settings", component: SettingsView, project: true },
   { id: "prefs", label: "⚙ Preferences", component: PreferencesView },
 ];

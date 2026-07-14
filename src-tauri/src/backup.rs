@@ -16,12 +16,18 @@ pub fn rotate(target: &Path) -> Result<(), String> {
         return Ok(());
     }
     // Use the non-canonical root to match jail::resolve, which returns paths
-    // rooted at ~/.claude without following symlinks.
+    // rooted at the scope config dir without following symlinks.
     let root = jail::root()?;
-    let rel = target.strip_prefix(&root).map_err(|_| "target outside root")?;
-
     let backups_dir = root.join("backups");
-    let base = backups_dir.join(rel); // e.g. backups/skills/foo/SKILL.md
+    // Normal in-config-dir files nest under backups/ by their relative path.
+    // Whitelisted project-root files (e.g. <proj>/CLAUDE.md) live ABOVE root, so
+    // back them up under backups/_root/<filename>.
+    let base = match target.strip_prefix(&root) {
+        Ok(rel) => backups_dir.join(rel),
+        Err(_) => backups_dir
+            .join("_root")
+            .join(target.file_name().ok_or("invalid target")?),
+    };
     if let Some(parent) = base.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
