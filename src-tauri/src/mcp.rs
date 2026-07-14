@@ -214,8 +214,8 @@ mod tests {
     use crate::testutil::with_claude;
 
     fn write_claude_json(v: Value) {
-        let home = std::env::var_os("HOME").unwrap();
-        let p = PathBuf::from(home).join(".claude.json");
+        let home = crate::scope::home_dir().unwrap();
+        let p = home.join(".claude.json");
         fs::write(p, serde_json::to_string(&v).unwrap()).unwrap();
     }
 

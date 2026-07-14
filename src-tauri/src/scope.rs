@@ -30,9 +30,17 @@ impl Scope {
     }
 }
 
+/// Resolve the user's home directory cross-platform.
+pub fn home_dir() -> Result<PathBuf, String> {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .ok_or_else(|| "home directory not set (neither HOME nor USERPROFILE environment variables found)".into())
+}
+
 fn global_config_dir() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME").ok_or("HOME not set")?;
-    Ok(PathBuf::from(home).join(".claude"))
+    let home = home_dir()?;
+    Ok(home.join(".claude"))
 }
 
 // Process-global active scope. Lazily initialised to Global on first read.
@@ -50,11 +58,12 @@ pub fn mcp_file() -> Result<PathBuf, String> {
     match (&s.kind, &s.project_dir) {
         (Kind::Project, Some(proj)) => Ok(proj.join(".mcp.json")),
         _ => {
-            let home = std::env::var_os("HOME").ok_or("HOME not set")?;
-            Ok(PathBuf::from(home).join(".claude.json"))
+            let home = home_dir()?;
+            Ok(home.join(".claude.json"))
         }
     }
 }
+
 
 /// Absolute path for one of the whitelisted project-root files. `name` is
 /// `CLAUDE.md` or `.mcp.json`. Global scope maps these to `~/.claude/CLAUDE.md`
