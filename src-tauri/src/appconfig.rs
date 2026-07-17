@@ -27,8 +27,13 @@ impl Default for AppConfig {
 }
 
 fn config_dir() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME").ok_or("HOME not set")?;
-    let home = PathBuf::from(home);
+    if cfg!(target_os = "windows") {
+        if let Some(appdata) = std::env::var_os("APPDATA") {
+            return Ok(PathBuf::from(appdata).join(APP_ID));
+        }
+    }
+
+    let home = crate::scope::home_dir()?;
     let base = if cfg!(target_os = "macos") {
         home.join("Library").join("Application Support")
     } else {

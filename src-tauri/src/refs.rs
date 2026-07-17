@@ -83,8 +83,8 @@ fn resolve_path(token: &str, file_dir: &str, root: &Path) -> Option<String> {
     let candidates: Vec<PathBuf> = if let Some(rest) = token.strip_prefix("~/.claude/") {
         vec![root.join(rest)]
     } else if let Some(rest) = token.strip_prefix('~') {
-        let home = std::env::var_os("HOME")?;
-        vec![Path::new(&home).join(rest.trim_start_matches('/'))]
+        let home = crate::scope::home_dir().ok()?;
+        vec![home.join(rest.trim_start_matches('/'))]
     } else {
         // Relative to the file's dir, then to root.
         vec![root.join(file_dir).join(token), root.join(token)]

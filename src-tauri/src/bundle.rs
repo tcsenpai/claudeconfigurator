@@ -60,8 +60,8 @@ fn require_global() -> Result<(), String> {
 }
 
 fn global_claude_dir() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME").ok_or("HOME not set")?;
-    Ok(PathBuf::from(home).join(".claude"))
+    let home = crate::scope::home_dir()?;
+    Ok(home.join(".claude"))
 }
 
 /// Scan settings.json + ~/.claude.json mcpServers for likely secrets.
@@ -631,8 +631,8 @@ fn write_json(path: &Path, v: &Value) -> Result<(), String> {
 }
 
 fn claude_json_path() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME").ok_or("HOME not set")?;
-    Ok(PathBuf::from(home).join(".claude.json"))
+    let home = crate::scope::home_dir()?;
+    Ok(home.join(".claude.json"))
 }
 
 /// Read the mcpServers map from ~/.claude.json as (name, config) pairs.
