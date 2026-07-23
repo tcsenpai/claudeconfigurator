@@ -132,13 +132,35 @@ pub fn import_skill_dir(name: String, src: String) -> Result<String, String> {
 /// up, then the whole directory is removed. Jailed: the target must resolve
 /// inside ~/.claude. The UI confirms before calling this.
 #[tauri::command]
-pub fn delete_entry(path: String) -> Result<(), String> {
+pub fn delete_entry(path: String, delete_backups: bool) -> Result<(), String> {
     let abs = jail::resolve(&path)?;
+    if delete_backups {
+        let base = backup::resolve_backup_base(&abs)?;
+        if abs.is_dir() {
+            if base.exists() {
+                let _ = fs::remove_dir_all(&base);
+            }
+        } else {
+            for n in 0..5 {
+                let mut s = base.as_os_str().to_owned();
+                s.push(format!(".{n}.bak"));
+                let p = PathBuf::from(s);
+                if p.exists() {
+                    let _ = fs::remove_file(&p);
+                }
+            }
+        }
+    } else {
+        if abs.is_dir() {
+            backup_tree(&abs)?;
+        } else if abs.is_file() {
+            backup::rotate(&abs)?;
+        }
+    }
+
     if abs.is_dir() {
-        backup_tree(&abs)?;
         fs::remove_dir_all(&abs).map_err(|e| e.to_string())
     } else if abs.is_file() {
-        backup::rotate(&abs)?;
         fs::remove_file(&abs).map_err(|e| e.to_string())
     } else {
         Err(format!("{path} does not exist"))

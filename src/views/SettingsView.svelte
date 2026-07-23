@@ -4,6 +4,7 @@
   import JsonNode from "../lib/JsonNode.svelte";
   import { assignGroups, TAB_KEYS } from "../lib/settingsGroups";
   import { nav } from "../lib/nav.svelte";
+  import HistoryDialog from "../lib/HistoryDialog.svelte";
 
   const PATH = "settings.json";
 
@@ -14,6 +15,7 @@
   let dirty = $state(false);
   let saving = $state(false);
   let error = $state("");
+  let historyOpen = $state(false);
 
   let rawText = $state("");
   let rawError = $state("");
@@ -61,6 +63,7 @@
     <div class="actions">
       <button class:on={mode === "form"} onclick={enterForm}>Form</button>
       <button class:on={mode === "raw"} onclick={enterRaw}>Raw</button>
+      <button onclick={() => (historyOpen = true)}>History</button>
       <button onclick={save} disabled={!canSave}>{saving ? "Saving…" : "Save"}</button>
     </div>
   </div>
@@ -104,6 +107,20 @@
     </div>
   {/if}
 </div>
+
+{#if historyOpen && data}
+  <HistoryDialog
+    path={PATH}
+    currentValue={JSON.stringify(data, null, 2)}
+    onClose={() => (historyOpen = false)}
+    onRestore={(restored) => {
+      data = JSON.parse(restored);
+      rawText = restored;
+      dirty = true;
+      historyOpen = false;
+    }}
+  />
+{/if}
 
 <style>
   .wrap { display: flex; flex-direction: column; height: 100%; }

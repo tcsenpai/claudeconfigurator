@@ -21,6 +21,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            backup::backup_list,
+            backup::backup_read,
+            backup::backup_restore,
             fs_cmds::list_root_md,
             fs_cmds::read_file,
             fs_cmds::write_file,

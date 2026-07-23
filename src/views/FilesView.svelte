@@ -27,9 +27,9 @@
     selected = path;
   }
 
-  async function doDelete(path: string) {
+  async function doDelete(path: string, deleteBackups = false) {
     pendingDelete = null;
-    await deleteEntry(path);
+    await deleteEntry(path, deleteBackups);
     if (selected === path) selected = null;
     await reload();
   }
@@ -54,7 +54,7 @@
     <DocEditor
       path={selected}
       onFollow={follow}
-      onDelete={selected ? () => doDelete(selected!) : null}
+      onDelete={selected ? (delBackups) => doDelete(selected!, delBackups) : null}
     />
   </div>
 </div>
@@ -65,9 +65,10 @@
 
 {#if pendingDelete}
   <ConfirmDialog
-    message={`Delete ${pendingDelete.path}? A backup is kept in ~/.claude/backups/.`}
+    message={`Delete ${pendingDelete.path}?`}
+    checkboxLabel="Delete backup history as well"
     onCancel={() => (pendingDelete = null)}
-    onConfirm={() => doDelete(pendingDelete!.path)}
+    onConfirm={(delBackups) => doDelete(pendingDelete!.path, delBackups)}
   />
 {/if}
 

@@ -20,6 +20,22 @@ pub fn resolve_root_file(name: &str) -> Result<PathBuf, String> {
     scope::root_file(name)
 }
 
+/// Resolve either a normal in-config-dir path or a `@root/<name>` root file.
+pub fn resolve_any(path: &str) -> Result<PathBuf, String> {
+    const ROOT_PREFIX: &str = "@root/";
+    if let Some(name) = path.strip_prefix(ROOT_PREFIX) {
+        // .mcp.json / ~/.claude.json must only be mutated via the surgical mcp
+        // commands, never whole-file overwritten through the generic editor.
+        if name == ".mcp.json" {
+            return Err("edit MCP servers via the MCP tab, not as a raw file".into());
+        }
+        resolve_root_file(name)
+    } else {
+        resolve(path)
+    }
+}
+
+
 /// Resolve a caller-supplied path and guarantee its *entry point* stays inside
 /// `~/.claude`. Returns the path rooted at `~/.claude` WITHOUT following
 /// symlinks, so a symlink legitimately placed under `~/.claude` (e.g. a skill

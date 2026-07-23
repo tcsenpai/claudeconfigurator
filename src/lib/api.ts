@@ -128,10 +128,21 @@ export const importFile = (kind: Kind, name: string, src: string, namespace?: st
   invoke<string>("import_file", { kind, name, src, namespace: namespace || null });
 export const importSkillDir = (name: string, src: string) =>
   invoke<string>("import_skill_dir", { name, src });
-export const deleteEntry = (path: string) => invoke<void>("delete_entry", { path });
+export const deleteEntry = (path: string, deleteBackups = false) => invoke<void>("delete_entry", { path, deleteBackups });
 
 // --- graph ---
 export interface GraphNode { id: string; kind: string }
 export interface GraphEdge { from: string; to: string; kind: string }
 export interface Graph { nodes: GraphNode[]; edges: GraphEdge[] }
 export const graphData = () => invoke<Graph>("graph_data");
+
+// --- backup history ---
+export interface BackupInfo {
+  index: number;
+  size: number;
+  modified_ms: number;
+}
+export const backupList = (path: string) => invoke<BackupInfo[]>("backup_list", { path });
+export const backupRead = (path: string, index: number) => invoke<string>("backup_read", { path, index });
+export const backupRestore = (path: string, index: number) => invoke<string>("backup_restore", { path, index });
+

@@ -6,6 +6,7 @@
   import FrontmatterEditor from "./FrontmatterEditor.svelte";
   import EditorPane from "./EditorPane.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import HistoryDialog from "./HistoryDialog.svelte";
   import { appConfig } from "./appConfig.svelte";
 
   interface Props {
@@ -15,11 +16,13 @@
     onFollow?: (target: string) => void;
     /** When set, a red Delete button appears; called after the user confirms.
      * The parent performs the actual delete (it knows file vs skill-folder). */
-    onDelete?: (() => void) | null;
+    onDelete?: ((deleteBackups: boolean) => void) | null;
   }
   let { path, lang = "markdown", validateJson = false, onFollow = () => {}, onDelete = null }: Props = $props();
 
   let confirming = $state(false);
+  let historyOpen = $state(false);
+  let reloadCounter = $state(0);
 
   let doc = $state<FileDoc | null>(null);
   let fields = $state<Field[]>([]);
@@ -91,6 +94,7 @@
             {preview ? "Source" : "Preview"}
           </button>
         {/if}
+        <button onclick={() => (historyOpen = true)}>History</button>
         <button onclick={save} disabled={!dirty || saving}>{saving ? "Saving…" : "Save"}</button>
         {#if onDelete}
           <button class="danger" onclick={() => (confirming = true)}>Delete</button>
@@ -103,7 +107,7 @@
         <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         <div class="md">{@html html}</div>
       {:else}
-        {#key doc.path}
+        {#key doc.path + reloadCounter}
           <EditorPane doc={body} dir={doc.dir} {lang} {onFollow} onChange={onBody} />
         {/key}
       {/if}
@@ -117,9 +121,24 @@
 
 {#if confirming && doc}
   <ConfirmDialog
-    message={`Delete ${doc.path}? A backup is kept in ~/.claude/backups/.`}
+    message={`Delete ${doc.path}?`}
+    checkboxLabel="Delete backup history as well"
     onCancel={() => (confirming = false)}
-    onConfirm={() => { confirming = false; onDelete?.(); }}
+    onConfirm={(delBackups) => { confirming = false; onDelete?.(delBackups); }}
+  />
+{/if}
+
+{#if historyOpen && doc}
+  <HistoryDialog
+    path={doc.path}
+    currentValue={body}
+    onClose={() => (historyOpen = false)}
+    onRestore={(restored) => {
+      body = restored;
+      dirty = true;
+      historyOpen = false;
+      reloadCounter++;
+    }}
   />
 {/if}
 
