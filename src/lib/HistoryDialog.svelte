@@ -13,6 +13,7 @@
   let backups = $state<BackupInfo[]>([]);
   let selected = $state<BackupInfo | null>(null);
   let backupText = $state("");
+  let nextText = $state("");
   let loading = $state(false);
   let restoring = $state(false);
   let error = $state("");
@@ -26,7 +27,7 @@
     if (selected === null || backupText === null) return [];
     
     const oldLines = backupText ? backupText.split(/\r?\n/) : [];
-    const newLines = currentValue ? currentValue.split(/\r?\n/) : [];
+    const newLines = nextText ? nextText.split(/\r?\n/) : [];
     const n = oldLines.length;
     const m = newLines.length;
 
@@ -34,7 +35,7 @@
     if (n * m > 100000) {
       return [
         { type: "removed", text: `[Backup version - ${oldLines.length} lines]` },
-        { type: "added", text: `[Current version - ${newLines.length} lines]` }
+        { type: "added", text: `[Next version - ${newLines.length} lines]` }
       ];
     }
 
@@ -87,9 +88,16 @@
     error = "";
     try {
       backupText = await backupRead(path, b.index);
+      const idx = backups.findIndex((x) => x.index === b.index);
+      if (idx === 0) {
+        nextText = currentValue;
+      } else {
+        nextText = await backupRead(path, backups[idx - 1].index);
+      }
     } catch (e) {
       error = String(e);
       backupText = "";
+      nextText = "";
     }
   }
 
@@ -163,7 +171,7 @@
 
       <div class="viewer">
         <div class="section-title">
-          <span>Changes (Red = Backup, Green = Current)</span>
+          <span>Changes (Red = Selected Backup, Green = Next Newer Version / Current)</span>
         </div>
         <div class="diff-area">
           {#if selected}
