@@ -81,9 +81,12 @@
 
   async function openHistory() {
     if (!doc) return;
+    const currentPath = doc.path;
     if (dirty) await save();
+    if (path !== currentPath) return;
     try {
-      const d = await readFile(doc.path);
+      const d = await readFile(currentPath);
+      if (path !== currentPath) return;
       doc = d; fields = d.fields; body = d.body; dirty = false;
       historyOpen = true;
     } catch (e) {
@@ -147,8 +150,11 @@
     onClose={() => (historyOpen = false)}
     onRestore={async () => {
       historyOpen = false;
+      const currentPath = path;
+      if (!currentPath) return;
       try {
-        const d = await readFile(doc!.path);
+        const d = await readFile(currentPath);
+        if (path !== currentPath) return;
         doc = d; fields = d.fields; body = d.body; dirty = false;
         reloadCounter++;
       } catch (e) {
