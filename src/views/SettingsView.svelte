@@ -116,7 +116,7 @@
     onRestore={(restored) => {
       data = JSON.parse(restored);
       rawText = restored;
-      dirty = true;
+      dirty = false;
       historyOpen = false;
     }}
   />

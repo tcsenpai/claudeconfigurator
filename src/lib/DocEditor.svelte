@@ -78,6 +78,18 @@
       saving = false;
     }
   }
+
+  async function openHistory() {
+    if (!doc) return;
+    if (dirty) await save();
+    try {
+      const d = await readFile(doc.path);
+      doc = d; fields = d.fields; body = d.body; dirty = false;
+      historyOpen = true;
+    } catch (e) {
+      error = String(e);
+    }
+  }
 </script>
 
 {#if error}
@@ -94,7 +106,7 @@
             {preview ? "Source" : "Preview"}
           </button>
         {/if}
-        <button onclick={() => (historyOpen = true)}>History</button>
+        <button onclick={openHistory}>History</button>
         <button onclick={save} disabled={!dirty || saving}>{saving ? "Saving…" : "Save"}</button>
         {#if onDelete}
           <button class="danger" onclick={() => (confirming = true)}>Delete</button>
@@ -131,13 +143,17 @@
 {#if historyOpen && doc}
   <HistoryDialog
     path={doc.path}
-    currentValue={body}
+    currentValue={doc.raw}
     onClose={() => (historyOpen = false)}
-    onRestore={(restored) => {
-      body = restored;
-      dirty = true;
+    onRestore={async () => {
       historyOpen = false;
-      reloadCounter++;
+      try {
+        const d = await readFile(doc!.path);
+        doc = d; fields = d.fields; body = d.body; dirty = false;
+        reloadCounter++;
+      } catch (e) {
+        error = String(e);
+      }
     }}
   />
 {/if}
