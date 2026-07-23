@@ -60,9 +60,9 @@ pub fn rotate(target: &Path) -> Result<(), String> {
     let content = fs::read(target).map_err(|e| e.to_string())?;
     let dest = bak_path(&base, 0);
     fs::write(&dest, content).map_err(|e| e.to_string())?;
-    if let Ok(f) = fs::OpenOptions::new().write(true).open(&dest) {
-        let _ = f.set_modified(target_mtime);
-    }
+    
+    let ft = filetime::FileTime::from_system_time(target_mtime);
+    let _ = filetime::set_file_mtime(&dest, ft);
     Ok(())
 }
 

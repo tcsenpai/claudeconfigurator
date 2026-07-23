@@ -469,6 +469,7 @@ dependencies = [
 name = "claudeconf"
 version = "1.1.0"
 dependencies = [
+ "filetime",
  "flate2",
  "serde",
  "serde_json",
