@@ -8,25 +8,10 @@ use crate::jail;
 use crate::refs::{self, Ref};
 use serde::Serialize;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-/// Sentinel prefix for a whitelisted project-root file (CLAUDE.md / .mcp.json),
-/// which lives OUTSIDE the config dir in project scope. `@root/CLAUDE.md`.
 const ROOT_PREFIX: &str = "@root/";
 
-/// Resolve either a normal in-config-dir path or a `@root/<name>` root file.
-fn resolve_any(path: &str) -> Result<PathBuf, String> {
-    if let Some(name) = path.strip_prefix(ROOT_PREFIX) {
-        // .mcp.json / ~/.claude.json must only be mutated via the surgical mcp
-        // commands, never whole-file overwritten through the generic editor.
-        if name == ".mcp.json" {
-            return Err("edit MCP servers via the MCP tab, not as a raw file".into());
-        }
-        jail::resolve_root_file(name)
-    } else {
-        jail::resolve(path)
-    }
-}
 
 /// A file listing entry for the Files view.
 #[derive(Serialize)]
@@ -78,7 +63,7 @@ pub fn list_root_md() -> Result<Vec<FileItem>, String> {
 /// Read + parse a file into fields + body.
 #[tauri::command]
 pub fn read_file(path: String) -> Result<FileDoc, String> {
-    let abs = resolve_any(&path)?;
+    let abs = jail::resolve_any(&path)?;
     let raw = fs::read_to_string(&abs).map_err(|e| e.to_string())?;
     let (fm, body) = frontmatter::split(&raw);
     let fields = fm.map(frontmatter::parse_fields).unwrap_or_default();
@@ -101,7 +86,7 @@ pub fn write_file(
     body: String,
     validate_json: bool,
 ) -> Result<(), String> {
-    let abs = resolve_any(&path)?;
+    let abs = jail::resolve_any(&path)?;
     let content = if fields.is_empty() {
         body
     } else {
@@ -169,10 +154,10 @@ mod tests {
     #[test]
     fn resolve_any_rejects_escape_and_raw_mcp() {
         with_claude(|_| {
-            assert!(resolve_any("@root/../../etc/passwd").is_err());
-            assert!(resolve_any("@root/secrets.env").is_err());
-            assert!(resolve_any("@root/.mcp.json").is_err()); // must use MCP tab
-            assert!(resolve_any("../escape").is_err());
+            assert!(jail::resolve_any("@root/../../etc/passwd").is_err());
+            assert!(jail::resolve_any("@root/secrets.env").is_err());
+            assert!(jail::resolve_any("@root/.mcp.json").is_err()); // must use MCP tab
+            assert!(jail::resolve_any("../escape").is_err());
         });
     }
 }

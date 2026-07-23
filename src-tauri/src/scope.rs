@@ -32,10 +32,13 @@ impl Scope {
 
 /// Resolve the user's home directory cross-platform.
 pub fn home_dir() -> Result<PathBuf, String> {
-    std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .map(PathBuf::from)
-        .ok_or_else(|| "home directory not set (neither HOME nor USERPROFILE environment variables found)".into())
+    let var = if cfg!(windows) {
+        std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))
+    } else {
+        std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
+    };
+    var.map(PathBuf::from)
+        .ok_or_else(|| "home directory not set (neither USERPROFILE nor HOME environment variables found)".into())
 }
 
 fn global_config_dir() -> Result<PathBuf, String> {

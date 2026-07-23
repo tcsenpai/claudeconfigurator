@@ -6,6 +6,7 @@
   import FrontmatterEditor from "./FrontmatterEditor.svelte";
   import EditorPane from "./EditorPane.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import HistoryDialog from "./HistoryDialog.svelte";
   import { appConfig } from "./appConfig.svelte";
 
   interface Props {
@@ -15,11 +16,13 @@
     onFollow?: (target: string) => void;
     /** When set, a red Delete button appears; called after the user confirms.
      * The parent performs the actual delete (it knows file vs skill-folder). */
-    onDelete?: (() => void) | null;
+    onDelete?: ((deleteBackups: boolean) => void) | null;
   }
   let { path, lang = "markdown", validateJson = false, onFollow = () => {}, onDelete = null }: Props = $props();
 
   let confirming = $state(false);
+  let historyOpen = $state(false);
+  let reloadCounter = $state(0);
 
   let doc = $state<FileDoc | null>(null);
   let fields = $state<Field[]>([]);
@@ -75,6 +78,21 @@
       saving = false;
     }
   }
+
+  async function openHistory() {
+    if (!doc) return;
+    const currentPath = doc.path;
+    if (dirty) await save();
+    if (path !== currentPath) return;
+    try {
+      const d = await readFile(currentPath);
+      if (path !== currentPath) return;
+      doc = d; fields = d.fields; body = d.body; dirty = false;
+      historyOpen = true;
+    } catch (e) {
+      error = String(e);
+    }
+  }
 </script>
 
 {#if error}
@@ -91,6 +109,7 @@
             {preview ? "Source" : "Preview"}
           </button>
         {/if}
+        <button onclick={openHistory}>History</button>
         <button onclick={save} disabled={!dirty || saving}>{saving ? "Saving…" : "Save"}</button>
         {#if onDelete}
           <button class="danger" onclick={() => (confirming = true)}>Delete</button>
@@ -103,7 +122,7 @@
         <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         <div class="md">{@html html}</div>
       {:else}
-        {#key doc.path}
+        {#key doc.path + reloadCounter}
           <EditorPane doc={body} dir={doc.dir} {lang} {onFollow} onChange={onBody} />
         {/key}
       {/if}
@@ -117,9 +136,31 @@
 
 {#if confirming && doc}
   <ConfirmDialog
-    message={`Delete ${doc.path}? A backup is kept in ~/.claude/backups/.`}
+    message={`Delete ${doc.path}?`}
+    checkboxLabel="Delete backup history as well"
     onCancel={() => (confirming = false)}
-    onConfirm={() => { confirming = false; onDelete?.(); }}
+    onConfirm={(delBackups) => { confirming = false; onDelete?.(delBackups); }}
+  />
+{/if}
+
+{#if historyOpen && doc}
+  <HistoryDialog
+    path={doc.path}
+    currentValue={doc.raw}
+    onClose={() => (historyOpen = false)}
+    onRestore={async () => {
+      historyOpen = false;
+      const currentPath = path;
+      if (!currentPath) return;
+      try {
+        const d = await readFile(currentPath);
+        if (path !== currentPath) return;
+        doc = d; fields = d.fields; body = d.body; dirty = false;
+        reloadCounter++;
+      } catch (e) {
+        error = String(e);
+      }
+    }}
   />
 {/if}
 

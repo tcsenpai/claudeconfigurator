@@ -4,10 +4,31 @@
 //! `.md` scanners never see them and there is no rescan loop.
 
 use crate::jail;
+use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const KEEP: usize = 5;
+
+#[derive(Serialize)]
+pub struct BackupInfo {
+    pub index: usize,
+    pub size: u64,
+    pub modified_ms: u64,
+}
+
+pub fn resolve_backup_base(target: &Path) -> Result<PathBuf, String> {
+    let root = jail::root()?;
+    let backups_dir = root.join("backups");
+    let base = match target.strip_prefix(&root) {
+        Ok(rel) => backups_dir.join(rel),
+        Err(_) => backups_dir
+            .join("_root")
+            .join(target.file_name().ok_or("invalid target")?),
+    };
+    Ok(base)
+}
 
 /// Back up `target` (an already-jailed absolute path under root). No-op if the
 /// file doesn't exist yet (first save of a new file).
@@ -15,22 +36,14 @@ pub fn rotate(target: &Path) -> Result<(), String> {
     if !target.exists() {
         return Ok(());
     }
-    // Use the non-canonical root to match jail::resolve, which returns paths
-    // rooted at the scope config dir without following symlinks.
-    let root = jail::root()?;
-    let backups_dir = root.join("backups");
-    // Normal in-config-dir files nest under backups/ by their relative path.
-    // Whitelisted project-root files (e.g. <proj>/CLAUDE.md) live ABOVE root, so
-    // back them up under backups/_root/<filename>.
-    let base = match target.strip_prefix(&root) {
-        Ok(rel) => backups_dir.join(rel),
-        Err(_) => backups_dir
-            .join("_root")
-            .join(target.file_name().ok_or("invalid target")?),
-    };
+    let base = resolve_backup_base(target)?;
     if let Some(parent) = base.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
+
+    let target_mtime = fs::metadata(target)
+        .and_then(|m| m.modified())
+        .unwrap_or_else(|_| SystemTime::now());
 
     // Shift existing .N.bak up by one, dropping anything at or beyond KEEP.
     for n in (0..KEEP).rev() {
@@ -44,7 +57,12 @@ pub fn rotate(target: &Path) -> Result<(), String> {
             let _ = fs::rename(&from, bak_path(&base, n + 1));
         }
     }
-    fs::copy(target, bak_path(&base, 0)).map_err(|e| e.to_string())?;
+    let content = fs::read(target).map_err(|e| e.to_string())?;
+    let dest = bak_path(&base, 0);
+    fs::write(&dest, content).map_err(|e| e.to_string())?;
+    
+    let ft = filetime::FileTime::from_system_time(target_mtime);
+    let _ = filetime::set_file_mtime(&dest, ft);
     Ok(())
 }
 
@@ -53,6 +71,68 @@ fn bak_path(base: &Path, n: usize) -> PathBuf {
     s.push(format!(".{n}.bak"));
     PathBuf::from(s)
 }
+
+/// List backups for a given jailed file path.
+#[tauri::command]
+pub fn backup_list(path: String) -> Result<Vec<BackupInfo>, String> {
+    let abs = jail::resolve_any(&path)?;
+    let base = resolve_backup_base(&abs)?;
+    let mut out = vec![];
+    for n in 0..KEEP {
+        let p = bak_path(&base, n);
+        if p.is_file() {
+            let meta = fs::metadata(&p).map_err(|e| e.to_string())?;
+            let modified = meta
+                .modified()
+                .map_err(|e| e.to_string())?
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+            out.push(BackupInfo {
+                index: n,
+                size: meta.len(),
+                modified_ms: modified,
+            });
+        }
+    }
+    // Sort by modified_ms descending so the newest backup is always first
+    out.sort_by(|a, b| b.modified_ms.cmp(&a.modified_ms));
+    Ok(out)
+}
+
+/// Read a backup file's raw content by index.
+#[tauri::command]
+pub fn backup_read(path: String, index: usize) -> Result<String, String> {
+    if index >= KEEP {
+        return Err("invalid backup index".into());
+    }
+    let abs = jail::resolve_any(&path)?;
+    let base = resolve_backup_base(&abs)?;
+    let p = bak_path(&base, index);
+    if !p.is_file() {
+        return Err("backup file not found".into());
+    }
+    fs::read_to_string(&p).map_err(|e| e.to_string())
+}
+
+/// Restore a backup file by index, returning its content.
+#[tauri::command]
+pub fn backup_restore(path: String, index: usize) -> Result<String, String> {
+    if index >= KEEP {
+        return Err("invalid backup index".into());
+    }
+    let abs = jail::resolve_any(&path)?;
+    let base = resolve_backup_base(&abs)?;
+    let p = bak_path(&base, index);
+    if !p.is_file() {
+        return Err("backup file not found".into());
+    }
+    rotate(&abs)?;
+    let content = fs::read(&p).map_err(|e| e.to_string())?;
+    fs::write(&abs, content).map_err(|e| e.to_string())?;
+    fs::read_to_string(&abs).map_err(|e| e.to_string())
+}
+
 
 #[cfg(test)]
 mod tests {
